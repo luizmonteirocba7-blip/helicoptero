@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>Painel Central H1 — Monitoramento &amp; Evidências</title>
+<link rel="icon" href="img/cbm.ico" type="image/x-icon">
+<link rel="shortcut icon" href="img/cbm.ico" type="image/x-icon">
+ 
+<script src="assets/js/tailwind.config.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+ 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://drive.google.com">
+<link rel="preconnect" href="https://docs.google.com">
+<link rel="preconnect" href="https://lh3.googleusercontent.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+ 
+<link rel="stylesheet" href="assets/css/styles.css?v=4">
+<style>
+  .loading-orbit{
+    width:54px !important;
+    height:54px !important;
+    margin:0 auto !important;
+    border-radius:999px !important;
+    border:4px solid rgba(255,255,255,.22) !important;
+    border-top-color:#fff !important;
+    border-right-color:#f0b43c !important;
+    animation:critical-loading-spin .85s linear infinite !important;
+  }
+  @keyframes critical-loading-spin{
+    to{ transform:rotate(360deg); }
+  }
+  .kpi-feature{
+    background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%) !important;
+    color:#fff !important;
+    border-color:transparent !important;
+  }
+  .kpi-feature-green{
+    background:linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%) !important;
+    color:#fff !important;
+  }
+</style>
+</head>
+ 
+<body class="font-sans">
+
+<header class="site-header">
+  <nav class="site-nav" aria-label="Navegação principal">
+    <a class="site-brand" href="https://www.bombeiros.mt.gov.br" target="_parent" aria-label="Portal CBMMT">
+      <img
+        src="https://www.bombeiros.mt.gov.br/image/layout_set_logo?img_id=18620751&t=1693342051695"
+        alt="CBMMT">
+    </a>
+    <button class="site-nav-toggle" type="button" data-action="toggle-mobile-nav"
+            aria-label="Abrir menu" aria-expanded="false" aria-controls="site-nav-links">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div id="site-nav-links" class="site-nav-links">
+      <a href="#visao-geral">Visão geral</a>
+      <a href="#indicadores">Indicadores</a>
+      <a href="#aquisicoes">Aquisições</a>
+      <a href="#evidencias">Evidências</a>
+    </div>
+  </nav>
+</header>
+ 
+<!-- ============ LOADING ============ -->
+<div id="loading-screen" class="loading-screen">
+  <div class="loading-card">
+    <div class="loading-logo"><i class="fa-solid fa-helicopter"></i></div>
+    <h2>PAINEL CENTRAL H1</h2>
+    <p>Estabelecendo conexão segura com a base de dados…</p>
+    <div class="loading-orbit" aria-hidden="true"></div>
+  </div>
+</div>
+ 
+<!-- ============ MODAL ============ -->
+<div id="modal-overlay" class="hidden fixed inset-0 bg-slate-950/95 z-[999999] flex-col items-center justify-center select-none"
+     role="dialog" aria-modal="true" aria-label="Visualizador de evidência">
+  <div class="absolute top-4 right-4 sm:top-6 sm:right-6 flex items-center gap-2 sm:gap-3 z-50">
+    <span id="modal-image-hint" class="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-white/10 border border-white/15 text-slate-300 text-xs font-mono">
+      <i class="fa-solid fa-computer-mouse"></i> Scroll / Arraste
+    </span>
+    <button id="modal-pdf-link" type="button" data-action="open-pdf"
+       class="h-11 px-4 bg-brand-500 hover:bg-brand-600 text-white rounded-full flex items-center gap-2 transition text-sm font-bold shadow-lg">
+      <i class="fa-regular fa-file-pdf"></i> Abrir PDF
+    </button>
+    <button data-action="zoom-in" class="modal-btn modal-zoom-control" aria-label="Aumentar zoom"><i class="fa-solid fa-plus"></i></button>
+    <button data-action="zoom-out" class="modal-btn modal-zoom-control" aria-label="Diminuir zoom"><i class="fa-solid fa-minus"></i></button>
+    <button data-action="close-modal" class="modal-btn danger" aria-label="Fechar"><i class="fa-solid fa-xmark text-xl"></i></button>
+  </div>
+  <div id="modal-wrapper" class="w-full h-full flex items-center justify-center p-4 relative">
+    <img id="modal-img" src="" alt="Evidência em tela cheia"
+         class="max-w-[92vw] max-h-[86vh] rounded-xl object-contain cursor-grab"
+         draggable="false">
+    <iframe id="modal-pdf" class="hidden" title="PDF da evidência" loading="eager" referrerpolicy="no-referrer"
+            style="width:min(920px,calc(100vw - 32px));height:calc(100vh - 96px);border:0;border-radius:12px;background:#1f1f1f;"></iframe>
+  </div>
+</div>
+ 
+<!-- ============ APP SHELL ============ -->
+<div class="flex flex-col lg:flex-row min-h-screen gap-3 p-3">
+ 
+  <!-- ---------- SIDEBAR ---------- -->
+  <aside class="sidebar panel p-5 lg:p-6 flex flex-row lg:flex-col items-center gap-4 lg:gap-0
+                lg:w-[300px] lg:shrink-0 lg:sticky lg:top-3 lg:self-start lg:h-[calc(100vh-1.5rem)] lg:overflow-y-auto">
+    <div class="brand-logo shrink-0 mt-1">
+      <span class="brand-ring"></span>
+      <i class="fa-solid fa-helicopter relative"></i>
+    </div>
+    <div class="flex flex-col lg:items-center min-w-0 lg:mt-5 lg:text-center">
+      <h1 class="brand-title">Aquisição de <span>Helicóptero</span></h1>
+      <span class="brand-sub">Painel de Controle · CBMMT</span>
+    </div>
+ 
+    <div class="hidden lg:flex flex-col w-full mt-7">
+      <div class="summary-card">
+        <div class="summary-head"><i class="fa-solid fa-circle-info"></i> Resumo Executivo</div>
+        <p>Monitoramento estratégico do Projeto Bombeiros Florestais 2 — acompanhamento rigoroso de metas, prazos, KPIs financeiros e gestão documental.</p>
+      </div>
+      <div class="meta-list">
+        <div><span>Programa</span><strong>Bombeiros Florestais 2</strong></div>
+        <div><span>Fonte</span><strong>Fundo Amazônia</strong></div>
+        <div><span>Órgão</span><strong>CBMMT</strong></div>
+      </div>
+      <div class="fundo-badge"><i class="fa-solid fa-leaf"></i> Fundo Amazônia</div>
+    </div>
+  </aside>
+ 
+  <!-- ---------- MAIN ---------- -->
+  <main class="flex-1 min-w-0 flex flex-col gap-4">
+ 
+    <!-- TOPBAR -->
+    <header class="topbar flex items-center justify-between gap-3 px-4 py-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="topbar-icon"><i class="fa-solid fa-gauge-high"></i></span>
+        <div class="min-w-0">
+          <h2 class="topbar-title truncate">Visão Geral Operacional</h2>
+          <p class="topbar-sub truncate">Monitoramento &amp; Evidências · Projeto H1</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <span class="status-pill"><span class="status-dot-live"></span> Online</span>
+        <span class="last-update hidden md:flex"><i class="fa-regular fa-clock"></i> Atual. <strong id="last-update">--:--</strong></span>
+        <button id="btn-refresh" data-action="refresh" class="refresh-btn" title="Atualizar dados" aria-label="Atualizar dados">
+          <i class="fa-solid fa-rotate-right spin-icon"></i>
+        </button>
+      </div>
+    </header>
+ 
+    <!-- RESUMO DO CONTRATO -->
+    <section id="visao-geral" class="reveal reveal-delay-1 flex flex-col gap-2">
+      <div class="sec-label">Resumo do Contrato <span class="line"></span></div>
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+ 
+        <!-- Contratação Temporários -->
+        <button class="kpi-card kpi-feature" data-metric="Contratação BM Temporários" data-default-meta="100" data-action="filter-metric"
+                style="background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%);color:#fff;border-color:transparent;">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="fa-solid fa-user-plus"></i></div>
+            <span class="kpi-pct">—</span>
+          </div>
+          <div class="kpi-label">Contratação BM Temporários</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <!-- Contratação Efetivo (estático = 66) -->
+        <div class="kpi-card kpi-static kpi-feature kpi-feature-green"
+             style="background:linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%);color:#fff;border-color:transparent;">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <span class="kpi-pct"><i class="fa-solid fa-circle-check"></i> Efetivo</span>
+          </div>
+          <div class="kpi-label">Contratação de BM Efetivo</div>
+          <div class="kpi-value">66</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill is-full"></div></div>
+          <div class="kpi-meta">Militares efetivos contratados</div>
+        </div>
+ 
+        <!-- Tempo Restante -->
+        <div class="info-card">
+          <div class="info-head"><i class="fa-solid fa-hourglass-half text-brand-600"></i> Tempo Restante</div>
+          <div class="flex items-center gap-3 mt-3">
+            <span class="info-icon"><i class="fa-solid fa-calendar-day"></i></span>
+            <div>
+              <span id="texto-prazo-meses" class="info-big text-slate-900">0</span>
+              <span class="info-unit">Meses</span>
+            </div>
+          </div>
+          <div class="info-foot">Prazo final · <strong id="texto-data-final">--/--/----</strong></div>
+        </div>
+ 
+        <!-- Valor do Contrato -->
+        <div class="info-card">
+          <div class="info-head"><i class="fa-solid fa-coins text-brand-600"></i> Valor do Contrato</div>
+          <div class="gauge-wrap">
+            <canvas id="gaugeValor"></canvas>
+            <div class="gauge-center">45%</div>
+          </div>
+          <div class="gauge-scale"><span>0%</span><span>EXECUÇÃO</span><span>100%</span></div>
+          <div class="info-foot">Total · <strong>R$ 45.000.000,00</strong></div>
+        </div>
+ 
+      </div>
+    </section>
+ 
+    <!-- INDICADORES -->
+    <section id="indicadores" class="reveal reveal-delay-2 flex flex-col gap-2">
+      <div class="sec-label">Indicadores de Desempenho <span class="line"></span></div>
+      <div class="kpi-grid">
+ 
+        <button class="kpi-card" data-metric="Eventos Integrados" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-handshake"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Eventos Integrados (SSC)</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Op órgãos federais" data-default-meta="6" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-building-shield"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">OP Órgãos Federais</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Área Monitorada" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-satellite"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Área Monitorada (Hec)</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Autos de Infração" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-file-invoice"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Autos de Infração</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Publicações" data-default-meta="54" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-book-open"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Publicações</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="BM FEM Capacitadas" data-default-meta="12" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-person-military-pointing"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">BM FEM Capacitadas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Média Focos de Calor" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Média Focos de Calor</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Campanhas" data-default-meta="24" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Campanhas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Formação de Brigadistas" data-default-meta="500" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-users-gear"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Formação Brigadista</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Missões de Fiscalização" data-default-meta="110" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass-location"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Missões de Fiscalização</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+ 
+        <button class="kpi-card" data-metric="Op de Combate" data-default-meta="6" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">OP Combate (Parceria)</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+
+        <button class="kpi-card" data-metric="Semana de Prevenção" data-default-meta="14" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-calendar-week"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Semana de Prevenção</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+
+        <button class="kpi-card" data-metric="Missões de Combate a Incêndios Florestais e Queimada Não Autorizada" data-default-meta="6000" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-helicopter"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Missões de Combate a Incêndios Florestais</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+
+        <button class="kpi-card" data-metric="Operações de Fiscalização" data-default-meta="32" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-clipboard-check"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Operações de Fiscalização</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+
+        <button class="kpi-card" data-metric="Brigada Municipal Mista" data-default-meta="100" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-people-group"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Brigada Municipal Mista</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+        </button>
+
+      </div>
+
+      <div class="sec-label mt-4">Cursos <span class="line"></span></div>
+      <div class="kpi-grid">
+        <button class="kpi-card" data-metric="Curso de Infrações Administrativas" data-default-meta="40" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-scale-balanced"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Curso de Infrações Administrativas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
+        </button>
+
+        <button class="kpi-card" data-metric="Curso de Perícia de Incêndios Florestais" data-default-meta="30" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Curso de Perícia de Incêndios Florestais</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
+        </button>
+
+        <button class="kpi-card" data-metric="Curso de Prevenção e Combate a Incêndios Florestais" data-default-meta="20" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Curso de Prevenção e Combate a Incêndios Florestais</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 400 h</div>
+        </button>
+
+        <button class="kpi-card" data-metric="Curso de Aeronave Remotamente Pilotada" data-default-meta="15" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-plane"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Curso de Aeronave Remotamente Pilotada</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
+        </button>
+
+        <button class="kpi-card" data-metric="Curso de Fogo Técnico" data-default-meta="20" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-flame-curved"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Curso de Fogo Técnico</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 80 h</div>
+        </button>
+      </div>
+    </section>
+ 
+    <!-- GRÁFICOS -->
+    <section id="analise-desempenho" class="performance-section reveal reveal-delay-3 flex flex-col gap-2">
+      <div class="sec-label">Análise Gráfica <span class="line"></span></div>
+      <div class="grid gap-3 xl:grid-cols-[1.6fr_1fr]">
+        <div class="panel flex flex-col min-h-[370px]">
+          <div class="panel-head">
+            <span class="panel-title">Métricas de Performance vs Alvo</span>
+            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir gráfico"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          <div class="flex-1 p-3 pt-1 min-h-0"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="panel flex flex-col min-h-[370px]">
+          <div class="panel-head">
+            <span class="panel-title">Atingimento das Metas (%)</span>
+            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir gráfico"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          <div class="flex-1 p-3 pt-1 min-h-0"><canvas id="pieChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+ 
+    <!-- TABELAS -->
+    <section id="aquisicoes" class="reveal reveal-delay-4 flex flex-col gap-2">
+      <div class="sec-label">Cronograma de Aquisições <span class="line"></span></div>
+      <div class="grid gap-3 lg:grid-cols-3">
+ 
+        <div class="panel flex flex-col overflow-hidden">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fa-solid fa-plane-up text-brand-600"></i> Helicóptero</span>
+            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir tabela"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          <div class="overflow-y-auto flex-1 max-h-[270px] px-1 pb-1">
+            <table class="data-table">
+              <thead><tr><th>Atividade</th><th class="right">Status</th></tr></thead>
+              <tbody id="tbody-helicoptero"></tbody>
+            </table>
+          </div>
+        </div>
+ 
+        <div class="panel flex flex-col overflow-hidden">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fa-solid fa-gas-pump text-red-700"></i> Combustível (150H)</span>
+            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir tabela"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          <div class="overflow-y-auto flex-1 max-h-[270px] px-1 pb-1">
+            <table class="data-table">
+              <thead><tr><th>Atividade</th><th class="right">Status</th></tr></thead>
+              <tbody id="tbody-combustivel"></tbody>
+            </table>
+          </div>
+        </div>
+ 
+        <div class="panel flex flex-col overflow-hidden">
+          <div class="panel-head">
+            <span class="panel-title"><i class="fa-solid fa-shield text-emerald-600"></i> Seguro</span>
+            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir tabela"><i class="fa-solid fa-expand"></i></button>
+          </div>
+          <div class="overflow-y-auto flex-1 max-h-[270px] px-1 pb-1">
+            <table class="data-table">
+              <thead><tr><th>Atividade</th><th class="right">Status</th></tr></thead>
+              <tbody id="tbody-seguro"></tbody>
+            </table>
+          </div>
+        </div>
+ 
+      </div>
+    </section>
+ 
+    <!-- DOCUMENTOS -->
+    <section id="evidencias" class="reveal reveal-delay-5 panel p-5 sm:p-7 mb-2">
+      <div class="document-library-head">
+        <div>
+          <div class="sec-label mb-2">Central de Documentos <span class="line"></span></div>
+          <p>Escolha um tema para baixar os documentos ou visualizar as fotos relacionadas.</p>
+        </div>
+        <i class="fa-solid fa-folder-open document-library-icon" aria-hidden="true"></i>
+      </div>
+      <div id="evidence-library" class="document-library" aria-live="polite"></div>
+    </section>
+ 
+  </main>
+</div>
+
+<footer class="site-footer">
+  <p>Seção de Tecnologia da Informação e Comunicação - STIC/BM7 &copy; <span id="footer-year"></span></p>
+  <img src="img/Brasao_CTIBM7.png" alt="">
+</footer>
+ 
+<script src="assets/js/app.js?v=19"></script>
+</body>
+</html>
