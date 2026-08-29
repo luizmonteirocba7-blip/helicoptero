@@ -8,44 +8,307 @@
 <link rel="icon" href="img/cbm.ico" type="image/x-icon">
 <link rel="shortcut icon" href="img/cbm.ico" type="image/x-icon">
  
-<script src="assets/js/tailwind.config.js"></script>
+<!-- Correção do erro do Tailwind: declaração segura da configuração -->
+<script>
+  window.tailwind = {
+    config: {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+          colors: {
+            brand: { 50:'#fff1f2',100:'#ffe4e6',200:'#fecdd3',300:'#fda4af',400:'#fb7185',
+                     500:'#e11d48',600:'#b7192a',700:'#96000a',800:'#7d1020',900:'#5f0b17' }
+          }
+        }
+      }
+    }
+  };
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
  
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://drive.google.com">
-<link rel="preconnect" href="https://docs.google.com">
-<link rel="preconnect" href="https://lh3.googleusercontent.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
  
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
  
-<link rel="stylesheet" href="assets/css/styles.css?v=4">
 <style>
-  .loading-orbit{
-    width:54px !important;
-    height:54px !important;
-    margin:0 auto !important;
-    border-radius:999px !important;
-    border:4px solid rgba(255,255,255,.22) !important;
-    border-top-color:#fff !important;
-    border-right-color:#f0b43c !important;
-    animation:critical-loading-spin .85s linear infinite !important;
-  }
-  @keyframes critical-loading-spin{
-    to{ transform:rotate(360deg); }
-  }
-  .kpi-feature{
-    background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%) !important;
-    color:#fff !important;
-    border-color:transparent !important;
-  }
-  .kpi-feature-green{
-    background:linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%) !important;
-    color:#fff !important;
-  }
+/* ============ TOKENS DE DESIGN E BASE ============ */
+:root{
+  --cbm-red:#96000a;
+  --cbm-red-dark:#7d1020;
+  --cbm-gold:#f0b43c;
+  --site-header-height:86px;
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e3e8ef;
+  --border-strong: #d4dbe5;
+  --track: #eef2f7;
+  --text: #0f172a;
+  --text-muted: #5b6b80;
+  --text-soft: #94a3b8;
+  --brand-50:#fff1f2; --brand-100:#ffe4e6; --brand-200:#fecdd3; --brand-300:#fda4af; --brand-400:#fb7185;
+  --brand-500:#e11d48; --brand-600:#b7192a; --brand-700:#96000a; --brand-900:#5f0b17;
+  --ok:#059669; --warn:#d97706; --low:#e11d48;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.05);
+  --shadow-md: 0 1px 2px rgba(15,23,42,.05), 0 16px 32px -22px rgba(15,23,42,.32);
+  --shadow-lg: 0 24px 48px -20px rgba(15,23,42,.28);
+}
+ 
+*{ box-sizing:border-box; }
+html,body{ margin:0; }
+body{
+  font-family:'Inter',sans-serif;
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(900px 500px at 100% -5%, rgba(183,25,42,.10), transparent 60%),
+    radial-gradient(800px 480px at -5% 110%, rgba(240,180,60,.10), transparent 60%);
+  background-attachment:fixed;
+  color:var(--text);
+  -webkit-font-smoothing:antialiased;
+}
+body.is-locked{ overflow:hidden; }
+body.has-mobile-nav{ overflow:hidden; }
+[id]{ scroll-margin-top:calc(var(--site-header-height) + 18px); }
+ 
+::-webkit-scrollbar{ width:9px; height:9px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:#c2ccda; border-radius:99px; border:2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover{ background:#9aa8bd; }
+ 
+.font-mono{ font-family:'JetBrains Mono',monospace; }
+
+.site-header{
+  position:sticky; top:0; z-index:80; background:var(--cbm-red);
+  border-bottom:4px solid #bd1a1a; box-shadow:0 10px 26px rgba(32,38,51,.16);
+}
+.site-nav{
+  width:100%; min-height:var(--site-header-height); margin:0;
+  padding:0 24px 0 32px; display:flex; align-items:center; justify-content:space-between; gap:24px;
+}
+.site-brand{ display:inline-flex; align-items:center; min-width:190px; }
+.site-brand img{ display:block; width:auto; max-width:210px; height:70px; object-fit:contain; }
+.site-nav-links{ display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; }
+.site-nav-links a{
+  position:relative; display:inline-flex; align-items:center; min-height:42px; padding:0 12px;
+  color:rgba(255,255,255,.78); font-weight:800; text-decoration:none; transition:color 160ms ease;
+}
+.site-nav-links a:hover, .site-nav-links a:focus{ color:#fff; }
+.site-nav-links a::after{
+  content:""; position:absolute; left:12px; right:12px; bottom:3px; height:2px;
+  border-radius:999px; background:#fff; opacity:0; transform:scaleX(.5);
+  transition:opacity 160ms ease, transform 160ms ease;
+}
+.site-nav-links a:hover::after, .site-nav-links a:focus::after{ opacity:1; transform:scaleX(1); }
+.site-nav-toggle{
+  display:none; position:relative; width:42px; height:42px; border-radius:12px;
+  border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.10); color:#fff;
+  cursor:pointer; place-items:center; font-size:18px;
+}
+.site-nav-toggle:focus-visible{ outline:3px solid rgba(255,255,255,.45); outline-offset:2px; }
+
+.panel{ background:var(--surface); border:1px solid var(--border); border-radius:18px; box-shadow:var(--shadow-md); }
+ 
+.sidebar{ position:relative; overflow:hidden; }
+.sidebar::after{ content:''; position:absolute; inset:0 0 auto 0; height:4px; background:linear-gradient(90deg,var(--brand-400),var(--brand-600),var(--brand-900)); }
+.brand-logo{
+  position:relative; width:82px; height:82px; border-radius:22px;
+  background:linear-gradient(150deg,#5f0b17,#b7192a); display:grid; place-items:center; color:#fff; font-size:34px;
+  box-shadow:0 14px 26px -10px rgba(183,25,42,.52);
+}
+.brand-ring{
+  position:absolute; inset:-6px; border-radius:26px; border:1.5px dashed rgba(183,25,42,.40);
+  animation:spin 14s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.brand-title{ font-size:1.2rem; font-weight:800; line-height:1.2; letter-spacing:-.01em; color:var(--text); text-transform:uppercase; }
+.brand-title span{ color:var(--brand-600); font-weight:400; display:block; }
+.brand-sub{ margin-top:.5rem; font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--text-soft); }
+.summary-card{ background:var(--surface-2); border:1px solid var(--border); border-radius:14px; padding:1rem 1.05rem; }
+.summary-head{ font-size:11.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--brand-700); display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; }
+.summary-card p{ margin:0; font-size:12.5px; line-height:1.65; color:var(--text-muted); text-align:justify; }
+.meta-list{ margin-top:.95rem; display:flex; flex-direction:column; gap:1px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.meta-list > div{ display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.6rem .85rem; background:var(--surface); }
+.meta-list > div + div{ border-top:1px solid var(--border); }
+.meta-list span{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-soft); }
+.meta-list strong{ font-size:12px; font-weight:700; color:var(--text); text-align:right; }
+.fundo-badge{ margin-top:.95rem; display:flex; align-items:center; justify-content:center; gap:.55rem; padding:.8rem; border-radius:12px; font-weight:800; font-size:14.5px; color:#047857; background:linear-gradient(135deg,#ecfdf5,#d1fae5); border:1px solid #a7f3d0; }
+
+.topbar{
+  position:sticky; top:calc(var(--site-header-height) + .75rem); z-index:40;
+  background:rgba(255,255,255,.85); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+  border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm);
+}
+.topbar-icon{ width:48px; height:48px; border-radius:13px; display:grid; place-items:center; background:linear-gradient(150deg,var(--brand-600),var(--brand-900)); color:#fff; font-size:20px; box-shadow:0 10px 18px -8px rgba(183,25,42,.52); }
+.topbar-title{ font-size:17px; font-weight:800; letter-spacing:-.01em; margin:0; }
+.topbar-sub{ font-size:12.5px; color:var(--text-soft); font-weight:600; margin:2px 0 0; }
+.status-pill{ display:flex; align-items:center; gap:.45rem; padding:.4rem .8rem; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:99px; font-size:12px; font-weight:800; color:#047857; text-transform:uppercase; letter-spacing:.05em; }
+.status-dot-live{ width:8px; height:8px; border-radius:99px; background:#10b981; box-shadow:0 0 0 0 rgba(16,185,129,.6); animation:pulse 2s infinite; }
+@keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(16,185,129,.55); } 70%{ box-shadow:0 0 0 7px rgba(16,185,129,0); } 100%{ box-shadow:0 0 0 0 rgba(16,185,129,0); } }
+.last-update{ align-items:center; gap:.45rem; font-size:12.5px; color:var(--text-muted); font-weight:600; }
+.last-update strong{ font-family:'JetBrains Mono',monospace; color:var(--text); }
+.refresh-btn{ width:44px; height:44px; border-radius:13px; display:grid; place-items:center; background:var(--surface); border:1px solid var(--border-strong); color:var(--brand-600); cursor:pointer; transition:all .18s ease; font-size:16px; }
+.refresh-btn:hover{ background:var(--brand-50); border-color:var(--brand-300); transform:translateY(-1px); }
+.refresh-btn:active{ transform:translateY(0); }
+#btn-refresh.is-loading .spin-icon{ animation:spin 1s linear infinite; }
+ 
+.sec-label{ display:flex; align-items:center; gap:.6rem; font-size:12.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin:.2rem .2rem .1rem; }
+.sec-label::before{ content:''; width:16px; height:3px; border-radius:99px; background:linear-gradient(90deg,var(--brand-500),var(--brand-700)); }
+.sec-label .line{ flex:1; height:1px; background:var(--border); }
+ 
+.kpi-grid{ display:grid; gap:.75rem; grid-template-columns:repeat(2,1fr); }
+@media(min-width:640px){ .kpi-grid{ grid-template-columns:repeat(3,1fr); } }
+@media(min-width:1024px){ .kpi-grid{ grid-template-columns:repeat(4,1fr); } }
+@media(min-width:1440px){ .kpi-grid{ grid-template-columns:repeat(6,1fr); } }
+ 
+.kpi-card{
+  position:relative; display:flex; flex-direction:column; gap:.6rem;
+  background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);
+  border:1px solid #cbd5e1; border-radius:16px;
+  padding:.95rem 1rem; text-align:left; width:100%; cursor:pointer;
+  font-family:inherit; color:inherit;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+  box-shadow:0 4px 6px -1px rgba(15,23,42,.04), 0 2px 4px -2px rgba(15,23,42,.04);
+}
+.kpi-card > *{ position:relative; z-index:1; }
+.kpi-card:hover{
+  transform:translateY(-4px); border-color:var(--brand-400);
+  box-shadow:0 20px 25px -5px rgba(183,25,42,.15), 0 8px 10px -6px rgba(183,25,42,.10);
+}
+.kpi-card:focus-visible{ outline:2px solid var(--brand-500); outline-offset:2px; }
+.kpi-card.kpi-active{
+  border-color:var(--brand-500); box-shadow:0 14px 28px -12px rgba(183,25,42,.40);
+  background:linear-gradient(180deg,var(--brand-50),var(--surface));
+}
+.kpi-static{ cursor:default; }
+.kpi-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:.5rem; }
+.kpi-icon{ width:44px; height:44px; border-radius:12px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand-600); font-size:18px; transition:all .18s ease; }
+.kpi-card:hover .kpi-icon{ background:var(--brand-100); }
+.kpi-active .kpi-icon{ background:var(--brand-600); color:#fff; }
+.kpi-pct{ font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:800; padding:3px 9px; border-radius:99px; background:var(--track); color:var(--text-muted); white-space:nowrap; display:flex; align-items:center; gap:.3rem; }
+.kpi-pct[data-tone="ok"]{ background:rgba(5,150,105,.12); color:#047857; }
+.kpi-pct[data-tone="warn"]{ background:rgba(217,119,6,.15); color:#b45309; }
+.kpi-pct[data-tone="low"]{ background:rgba(225,29,72,.12); color:#be123c; }
+.kpi-label{ font-size:11.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--text-muted); line-height:1.35; min-height:2.7em; }
+.kpi-value{ font-family:'JetBrains Mono',monospace; font-size:1.95rem; font-weight:800; letter-spacing:-.03em; color:var(--text); line-height:1; }
+.kpi-bar{ height:6px; border-radius:99px; background:var(--track); overflow:hidden; }
+.kpi-bar-fill{ height:100%; width:0%; border-radius:99px; background:linear-gradient(90deg,var(--brand-400),var(--brand-600)); transition:width 1.1s cubic-bezier(.22,.61,.36,1); }
+.kpi-bar-fill[data-tone="ok"]{ background:linear-gradient(90deg,#34d399,#059669); }
+.kpi-bar-fill[data-tone="warn"]{ background:linear-gradient(90deg,#fbbf24,#d97706); }
+.kpi-bar-fill[data-tone="low"]{ background:linear-gradient(90deg,#fb7185,#e11d48); }
+.kpi-bar-fill.is-full{ width:100%; }
+.kpi-meta{ font-size:10.5px; font-weight:600; color:var(--text-soft); text-transform:uppercase; letter-spacing:.04em; }
+.kpi-meta .meta-value{ font-family:'JetBrains Mono',monospace; color:var(--text-muted); font-weight:700; }
+ 
+.info-card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.05rem 1.15rem; display:flex; flex-direction:column; box-shadow:var(--shadow-sm); }
+.info-head{ font-size:11.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); display:flex; align-items:center; gap:.5rem; }
+.info-icon{ width:48px; height:48px; border-radius:13px; display:grid; place-items:center; background:var(--brand-50); color:var(--brand-600); font-size:21px; }
+.info-big{ font-family:'JetBrains Mono',monospace; font-size:2.6rem; font-weight:800; line-height:1; letter-spacing:-.03em; }
+.info-unit{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-soft); display:block; margin-top:4px; }
+.info-foot{ margin-top:auto; padding-top:.75rem; font-size:11px; font-weight:600; color:var(--text-soft); text-transform:uppercase; letter-spacing:.04em; border-top:1px dashed var(--border-strong); }
+.info-foot strong{ font-family:'JetBrains Mono',monospace; color:var(--text-muted); }
+.gauge-wrap{ position:relative; width:158px; height:84px; margin:.4rem auto 0; }
+.gauge-center{ position:absolute; inset:auto 0 2px; text-align:center; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:16px; color:var(--ok); }
+.gauge-scale{ display:flex; justify-content:space-between; width:158px; margin:.4rem auto 0; font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; color:var(--text-soft); }
+ 
+.panel-head{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.9rem 1.05rem .3rem; }
+.panel-title{ font-size:12.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--text); display:flex; align-items:center; gap:.55rem; }
+.panel-title::before{ content:''; width:5px; height:17px; border-radius:99px; background:linear-gradient(180deg,var(--brand-500),var(--brand-700)); }
+.icon-btn{ width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:var(--surface-2); border:1px solid var(--border); color:var(--text-soft); cursor:pointer; transition:all .15s ease; font-size:14px; }
+.icon-btn:hover{ color:var(--brand-600); border-color:var(--brand-300); background:var(--brand-50); }
+ 
+.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
+.data-table thead th{ position:sticky; top:0; z-index:1; background:var(--surface-2); color:var(--text-soft); font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; padding:.6rem .95rem; text-align:left; border-bottom:1px solid var(--border); }
+.data-table thead th.right{ text-align:right; }
+.data-table tbody td{ padding:.65rem .95rem; border-bottom:1px solid var(--border); color:var(--text-muted); font-weight:500; }
+.data-table tbody tr{ transition:background .15s ease; }
+.data-table tbody tr:hover{ background:var(--surface-2); }
+.data-table tbody tr:last-child td{ border-bottom:none; }
+.cell-task{ display:flex; align-items:center; gap:.6rem; min-width:0; }
+.cell-task span.txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dot{ width:8px; height:8px; border-radius:99px; flex:none; background:#94a3b8; }
+.dot.ok{ background:#10b981; } .dot.run{ background:#f59e0b; } .dot.no{ background:#f43f5e; }
+.badge{ display:inline-block; padding:3px 10px; border-radius:99px; font-size:10px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; border:1px solid transparent; }
+.badge.ok{ color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
+.badge.run{ color:#b45309; background:#fffbeb; border-color:#fcd34d; }
+.badge.no{ color:#be123c; background:#fff1f2; border-color:#fda4af; }
+.status-select{ max-width:132px; padding-right:24px; cursor:pointer; font-family:inherit; appearance:none; -webkit-appearance:none; background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%); background-position:calc(100% - 13px) 50%,calc(100% - 8px) 50%; background-size:5px 5px,5px 5px; background-repeat:no-repeat; }
+.status-select:focus{ outline:2px solid rgba(183,25,42,.28); outline-offset:2px; }
+.status-select:disabled{ opacity:.65; cursor:progress; }
+
+.loading-orbit{ width:54px !important; height:54px !important; margin:0 auto !important; border-radius:999px !important; border:4px solid rgba(255,255,255,.22) !important; border-top-color:#fff !important; border-right-color:#f0b43c !important; animation:critical-loading-spin .85s linear infinite !important; }
+@keyframes critical-loading-spin{ to{ transform:rotate(360deg); } }
+.kpi-feature{ background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%) !important; color:#fff !important; border-color:transparent !important; }
+.kpi-feature-green{ background:linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%) !important; color:#fff !important; border-color:transparent !important; }
+
+.loading-screen{ position:fixed; inset:0; z-index:9999; display:grid; place-items:center; background:radial-gradient(900px 520px at 50% 28%, rgba(240,180,60,.20), transparent 62%),linear-gradient(135deg,#5f0b17 0%,#96000a 48%,#7d1020 100%); transition:opacity .6s ease; overflow:hidden; }
+.loading-screen::before{ content:''; position:absolute; inset:0; background-image:url('https://placehold.co/1940x1080/5f0b17/96000a?text=Loading...'); background-repeat:no-repeat; background-position:center 43%; background-size:min(146vw,1940px) auto; opacity:.96; filter:drop-shadow(0 30px 42px rgba(0,0,0,.34)); pointer-events:none; }
+.loading-screen::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg,rgba(95,11,23,.16),rgba(95,11,23,.82)),radial-gradient(circle at 50% 22%,rgba(255,255,255,.16),transparent 34rem); pointer-events:none; }
+.loading-card{ position:relative; z-index:1; text-align:center; max-width:430px; padding:2rem 2.25rem; border:1px solid rgba(255,255,255,.18); border-radius:18px; background:rgba(95,11,23,.28); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:0 24px 70px rgba(0,0,0,.22); }
+.loading-logo{ width:84px; height:84px; border-radius:23px; margin:0 auto 1.5rem; display:grid; place-items:center; font-size:35px; color:#fff; background:linear-gradient(150deg,var(--cbm-red-dark),var(--cbm-red)); box-shadow:0 18px 34px -12px rgba(0,0,0,.45); animation:floaty 2.4s ease-in-out infinite; }
+@keyframes floaty{ 50%{ transform:translateY(-8px); } }
+.loading-card h2{ font-size:15.5px; font-weight:800; letter-spacing:.17em; color:#fff; margin:0 0 .55rem; }
+.loading-card p{ font-size:12.5px; color:rgba(255,255,255,.78); margin:0 0 1.35rem; line-height:1.6; }
+.loading-logo-error{ background:linear-gradient(150deg,#9f1239,#e11d48); }
+.error-title{ color:#be123c; }
+.retry-btn{ margin-top:1.2rem; padding:.65rem 1.4rem; border-radius:11px; border:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; color:#fff; background:linear-gradient(150deg,var(--brand-600),var(--brand-800)); display:inline-flex; align-items:center; gap:.5rem; }
+
+#modal-overlay{ -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+#modal-img{ transition:transform .15s ease-out; transform-origin:center center; }
+#modal-pdf{ width:min(920px,calc(100vw - 32px)); height:calc(100vh - 96px); border:0; border-radius:12px; background:#1f1f1f; box-shadow:0 24px 70px rgba(0,0,0,.42); }
+.modal-pdf-hidden{ display:none !important; }
+#modal-wrapper{ overflow:hidden; }
+.modal-pdf-mode #modal-wrapper{ align-items:stretch !important; justify-content:center !important; padding:76px 16px 16px !important; }
+.modal-pdf-mode #modal-pdf{ display:block; width:min(920px,100%) !important; height:100% !important; }
+.modal-btn{ width:42px; height:42px; border-radius:99px; display:grid; place-items:center; color:#fff; cursor:pointer; transition:all .15s ease; border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.1); font-size:15px; }
+.modal-btn:hover{ background:rgba(255,255,255,.22); }
+.modal-btn.danger{ background:#e11d48; border-color:transparent; }
+.modal-btn.danger:hover{ background:#be123c; }
+
+.toast{ position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:.75rem 1.15rem; border-radius:11px; font-size:13px; font-weight:600; box-shadow:0 16px 34px rgba(0,0,0,.32); opacity:0; transition:all .3s ease; z-index:999999; display:flex; align-items:center; gap:.5rem; }
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+.site-footer{ display:flex; align-items:center; justify-content:center; gap:.65rem; flex-wrap:wrap; min-height:62px; padding:.85rem 1rem; color:#fff; background:var(--cbm-red); box-shadow:0 -10px 26px rgba(32,38,51,.10); }
+.site-footer p{ margin:0; text-align:center; font-size:.92rem; font-weight:600; }
+.site-footer img{ display:inline-block; width:auto; height:3.5rem; object-fit:contain; }
+
+.quadrant-expanded{ position:fixed !important; inset:1.5rem !important; width:auto !important; height:auto !important; z-index:99999 !important; display:flex !important; flex-direction:column !important; background:#fff !important; border-radius:18px; box-shadow:0 0 0 1px rgba(183,25,42,.38), 0 30px 60px -15px rgba(0,0,0,.4) !important; transform:none !important; overflow:hidden !important; }
+.quadrant-expanded > .panel-head{ padding:1rem 1.2rem .65rem; border-bottom:1px solid var(--border); }
+.quadrant-expanded > .flex-1{ flex:1 1 auto !important; min-height:0 !important; max-height:none !important; }
+.quadrant-expanded > .overflow-y-auto{ max-height:none !important; }
+.quadrant-expanded canvas{ width:100% !important; height:100% !important; }
+body.has-expanded-panel{ overflow:hidden; }
+body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:99990; -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+
+.reveal{ animation:reveal .55s cubic-bezier(.22,.61,.36,1) both; }
+.reveal-delay-1{ animation-delay:.04s; }
+.reveal-delay-2{ animation-delay:.1s; }
+.reveal-delay-3{ animation-delay:.16s; }
+.reveal-delay-4{ animation-delay:.22s; }
+.reveal-delay-5{ animation-delay:.28s; }
+@keyframes reveal{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+
+@media (max-width:720px){
+  :root{ --site-header-height:74px; }
+  .site-nav{ position:relative; width:100%; min-height:var(--site-header-height); padding:0 12px 0 18px; gap:12px; }
+  .site-brand{ min-width:auto; }
+  .site-brand img{ height:54px; max-width:160px; }
+  .site-nav-toggle{ display:grid; flex:none; }
+  .site-nav-links{ position:fixed; top:0; right:0; bottom:0; width:min(82vw,320px); display:flex; flex-direction:column; align-items:stretch; justify-content:flex-start; gap:6px; padding:calc(var(--site-header-height) + 16px) 16px 20px; border-radius:18px 0 0 18px; border-left:1px solid rgba(255,255,255,.18); background:#7d1020; box-shadow:-28px 0 46px -30px rgba(15,23,42,.78); transform:translateX(100%); transition:transform 220ms ease; z-index:120; pointer-events:none; }
+  .site-nav.is-open .site-nav-links{ transform:translateX(0); pointer-events:auto; }
+  .site-nav::before{ content:""; position:fixed; inset:0; background:rgba(15,23,42,.52); opacity:0; pointer-events:none; transition:opacity 220ms ease; z-index:110; }
+  .site-nav.is-open::before{ opacity:1; pointer-events:auto; }
+  .site-nav.is-open .site-nav-toggle{ z-index:130; }
+  .site-nav-links a{ min-height:46px; padding:0 14px; font-size:.96rem; border-radius:12px; }
+  .site-nav-links a:hover, .site-nav-links a:focus{ background:rgba(255,255,255,.10); }
+  .site-nav-links a::after{ display:none; }
+  .quadrant-expanded{ inset:.65rem !important; border-radius:14px; }
+  .quadrant-expanded > .panel-head{ padding:.85rem .9rem .55rem; }
+  .site-footer img{ height:3rem; }
+}
 </style>
 </head>
  
@@ -161,7 +424,7 @@
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
  
         <!-- Contratação Temporários -->
-        <button class="kpi-card kpi-feature" data-metric="Contratação BM Temporários" data-default-meta="100" data-action="filter-metric"
+        <button class="kpi-card kpi-feature" data-metric="Contratação BM Temporários" data-action="filter-metric"
                 style="background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%);color:#fff;border-color:transparent;">
           <div class="kpi-top">
             <div class="kpi-icon"><i class="fa-solid fa-user-plus"></i></div>
@@ -170,7 +433,7 @@
           <div class="kpi-label">Contratação BM Temporários</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">100</span></div>
         </button>
  
         <!-- Contratação Efetivo (estático = 66) -->
@@ -218,190 +481,186 @@
       <div class="sec-label">Indicadores de Desempenho <span class="line"></span></div>
       <div class="kpi-grid">
  
-        <button class="kpi-card" data-metric="Eventos Integrados" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-handshake"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Eventos Integrados (SSC)</div>
+        <!-- 1. Infrações Administrativas -->
+        <button class="kpi-card" data-metric="Infrações Administrativas" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-gavel"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Infrações Administrativas</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">40</span></div>
         </button>
- 
-        <button class="kpi-card" data-metric="Op órgãos federais" data-default-meta="6" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-building-shield"></i></div><span class="kpi-pct">—</span></div>
+
+        <!-- 2. Perícia de Incêndios -->
+        <button class="kpi-card" data-metric="Perícia de Incêndios" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass-plus"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Perícia de Incêndios</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">30</span></div>
+        </button>
+
+        <!-- 3. Prevenção e Combate -->
+        <button class="kpi-card" data-metric="Prevenção e Combate" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Prevenção e Combate</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">20</span></div>
+        </button>
+
+        <!-- 4. Aeronave Remotamente Pilotada -->
+        <button class="kpi-card" data-metric="Aeronave Remotamente Pilotada" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-plane-up"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Drone (RPAS)</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">15</span></div>
+        </button>
+
+        <!-- 5. Fogo Técnico -->
+        <button class="kpi-card" data-metric="Fogo Técnico" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-flame-curved"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Fogo Técnico</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">20</span></div>
+        </button>
+
+        <!-- 6. Campanhas -->
+        <button class="kpi-card" data-metric="Campanhas" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Campanhas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">24</span></div>
+        </button>
+
+        <!-- 7. Semana de Prevenção -->
+        <button class="kpi-card" data-metric="Semana de Prevenção" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-calendar-week"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Semana de Prevenção</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">14</span></div>
+        </button>
+
+        <!-- 8. Missões de Combate -->
+        <button class="kpi-card" data-metric="Missões de Combate" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-truck-fast"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Missões de Combate</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">6000</span></div>
+        </button>
+
+        <!-- 10. Operações de Fiscalização -->
+        <button class="kpi-card" data-metric="Operações de Fiscalização" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-clipboard-check"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Operações de Fiscalização</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">32</span></div>
+        </button>
+
+        <!-- 11. Missões de Fiscalização -->
+        <button class="kpi-card" data-metric="Missões de Fiscalização" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-map-location-dot"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Missões de Fiscalização</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">110</span></div>
+        </button>
+
+        <!-- 12. Capacitação de Brigadistas -->
+        <button class="kpi-card" data-metric="Capacitação de Brigadistas" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-users-gear"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Formação de Brigadistas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">500</span></div>
+        </button>
+
+        <!-- 13. Brigada Municipal Mista -->
+        <button class="kpi-card" data-metric="Brigada Municipal Mista" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-people-group"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Brigada Municipal Mista</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">100</span></div>
+        </button>
+
+        <!-- 14. Publicações -->
+        <button class="kpi-card" data-metric="Publicações" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-book-open"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Publicações Matérias</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">54</span></div>
+        </button>
+
+        <!-- 15. Focos de Calor -->
+        <button class="kpi-card" data-metric="Focos de Calor" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Focos de Calor</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">30431</span></div>
+        </button>
+
+        <!-- 16. BM FEM Capacitadas -->
+        <button class="kpi-card" data-metric="BM FEM Capacitadas" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-person-military-pointing"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">BM FEM Capacitadas</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">12</span></div>
+        </button>
+
+        <!-- 17. Op órgãos federais -->
+        <button class="kpi-card" data-metric="Op órgãos federais" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-handshake-angle"></i></div><span class="kpi-pct">—</span></div>
           <div class="kpi-label">OP Órgãos Federais</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">6</span></div>
         </button>
- 
-        <button class="kpi-card" data-metric="Área Monitorada" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-satellite"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Área Monitorada (Hec)</div>
+
+        <!-- 18. Op de Combate -->
+        <button class="kpi-card" data-metric="Op de Combate" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-people-carry-box"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">OP Combate (Parceria)</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">6</span></div>
         </button>
- 
+
+        <!-- 19. Eventos Integrados -->
+        <button class="kpi-card" data-metric="Eventos Integrados" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-handshake"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Eventos Integrados</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">10</span></div>
+        </button>
+
+        <!-- 20. Área Monitorada -->
+        <button class="kpi-card" data-metric="Área Monitorada" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-satellite"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Área Monitorada</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">50000</span></div>
+        </button>
+
+        <!-- 21. Autos de Infração -->
         <button class="kpi-card" data-metric="Autos de Infração" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-file-invoice"></i></div><span class="kpi-pct">—</span></div>
           <div class="kpi-label">Autos de Infração</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Publicações" data-default-meta="54" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-book-open"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Publicações</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="BM FEM Capacitadas" data-default-meta="12" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-person-military-pointing"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">BM FEM Capacitadas</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Média Focos de Calor" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Média Focos de Calor</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Campanhas" data-default-meta="24" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-bullhorn"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Campanhas</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Formação de Brigadistas" data-default-meta="500" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-users-gear"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Formação Brigadista</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Missões de Fiscalização" data-default-meta="110" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass-location"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Missões de Fiscalização</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
- 
-        <button class="kpi-card" data-metric="Op de Combate" data-default-meta="6" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">OP Combate (Parceria)</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">50</span></div>
         </button>
 
-        <button class="kpi-card" data-metric="Semana de Prevenção" data-default-meta="14" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-calendar-week"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Semana de Prevenção</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
-
-        <button class="kpi-card" data-metric="Missões de Combate a Incêndios Florestais e Queimada Não Autorizada" data-default-meta="6000" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-helicopter"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Missões de Combate a Incêndios Florestais</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
-
-        <button class="kpi-card" data-metric="Operações de Fiscalização" data-default-meta="32" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-clipboard-check"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Operações de Fiscalização</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
-
-        <button class="kpi-card" data-metric="Brigada Municipal Mista" data-default-meta="100" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-people-group"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Brigada Municipal Mista</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span></div>
-        </button>
-
-      </div>
-
-      <div class="sec-label mt-4">Cursos <span class="line"></span></div>
-      <div class="kpi-grid">
-        <button class="kpi-card" data-metric="Curso de Infrações Administrativas" data-default-meta="40" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-scale-balanced"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Infrações Administrativas</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
-        </button>
-
-        <button class="kpi-card" data-metric="Curso de Perícia de Incêndios Florestais" data-default-meta="30" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Perícia de Incêndios Florestais</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
-        </button>
-
-        <button class="kpi-card" data-metric="Curso de Prevenção e Combate a Incêndios Florestais" data-default-meta="20" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Prevenção e Combate a Incêndios Florestais</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 400 h</div>
-        </button>
-
-        <button class="kpi-card" data-metric="Curso de Aeronave Remotamente Pilotada" data-default-meta="15" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-plane"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Aeronave Remotamente Pilotada</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 40 h</div>
-        </button>
-
-        <button class="kpi-card" data-metric="Curso de Fogo Técnico" data-default-meta="20" data-action="filter-metric">
-          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-flame-curved"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Fogo Técnico</div>
-          <div class="kpi-value qtd-value">…</div>
-          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
-          <div class="kpi-meta">Meta: <span class="meta-value">…</span> · 80 h</div>
-        </button>
-      </div>
-    </section>
- 
-    <!-- GRÁFICOS -->
-    <section id="analise-desempenho" class="performance-section reveal reveal-delay-3 flex flex-col gap-2">
-      <div class="sec-label">Análise Gráfica <span class="line"></span></div>
-      <div class="grid gap-3 xl:grid-cols-[1.6fr_1fr]">
-        <div class="panel flex flex-col min-h-[370px]">
-          <div class="panel-head">
-            <span class="panel-title">Métricas de Performance vs Alvo</span>
-            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir gráfico"><i class="fa-solid fa-expand"></i></button>
-          </div>
-          <div class="flex-1 p-3 pt-1 min-h-0"><canvas id="barChart"></canvas></div>
-        </div>
-        <div class="panel flex flex-col min-h-[370px]">
-          <div class="panel-head">
-            <span class="panel-title">Atingimento das Metas (%)</span>
-            <button class="icon-btn" data-action="toggle-expand" aria-label="Expandir gráfico"><i class="fa-solid fa-expand"></i></button>
-          </div>
-          <div class="flex-1 p-3 pt-1 min-h-0"><canvas id="pieChart"></canvas></div>
-        </div>
       </div>
     </section>
  
@@ -452,16 +711,496 @@
       </div>
     </section>
  
-    <!-- DOCUMENTOS -->
-    <section id="evidencias" class="reveal reveal-delay-5 panel p-5 sm:p-7 mb-2">
-      <div class="document-library-head">
-        <div>
-          <div class="sec-label mb-2">Central de Documentos <span class="line"></span></div>
-          <p>Escolha um tema para baixar os documentos ou visualizar as fotos relacionadas.</p>
-        </div>
-        <i class="fa-solid fa-folder-open document-library-icon" aria-hidden="true"></i>
+    <!-- EVIDÊNCIAS -->
+    <section id="evidencias" class="reveal reveal-delay-5 panel relative overflow-hidden p-5 sm:p-7 mb-2">
+      <!-- Background estilizado -->
+      <div class="absolute inset-0 z-0 pointer-events-none bg-slate-900">
+        <div class="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950"></div>
       </div>
-      <div id="evidence-library" class="document-library" aria-live="polite"></div>
+ 
+      <div class="relative z-10">
+        <!-- Cabeçalho das Evidências -->
+        <div class="flex items-center gap-3 mb-6">
+          <h2 class="text-lg sm:text-xl font-extrabold uppercase tracking-tight text-white flex items-center gap-2">
+            <i class="fa-solid fa-folder-open text-brand-400"></i> Central de Comprovações
+          </h2>
+          <div class="h-px bg-white/10 flex-1"></div>
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1 bg-rose-500/15 border border-rose-400/40 rounded-full">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            <span class="text-[10px] font-extrabold text-rose-200 uppercase tracking-widest">Live Feed</span>
+          </div>
+        </div>
+ 
+        <!-- Grid de Cartões Independentes -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          
+          <!-- Contratação BM Temporários -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-user-plus"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Contratação BM Temporários</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- Contratação de BM Efetivo -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Contratação de BM Efetivo</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 1. Infrações Administrativas -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-gavel"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Infrações Administrativas</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Perícia de Incêndios -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-magnifying-glass-plus"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Perícia de Incêndios</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Prevenção e Combate -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-fire-extinguisher"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Prevenção e Combate</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. Aeronave Remotamente Pilotada -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-plane-up"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Drone (RPAS)</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. Fogo Técnico -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Fogo Técnico</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 6. Campanhas -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-bullhorn"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Campanhas</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. Semana de Prevenção -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-calendar-week"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Semana de Prevenção</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 8. Missões de Combate -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-truck-fast"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Missões de Combate</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 9. Operações de Fiscalização -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-clipboard-check"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Operações de Fiscalização</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 10. Missões de Fiscalização -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-map-location-dot"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Missões de Fiscalização</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 11. Formação de Brigadistas -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-users-gear"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Formação de Brigadistas</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 12. Brigada Municipal Mista -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-people-group"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Brigada Municipal Mista</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 13. Publicações Matérias -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-book-open"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Publicações Matérias</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 14. Focos de Calor -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-fire"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Focos de Calor</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 15. BM FEM Capacitadas -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-person-military-pointing"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">BM FEM Capacitadas</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 16. OP Órgãos Federais -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-handshake-angle"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">OP Órgãos Federais</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 17. OP Combate (Parceria) -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-people-carry-box"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">OP Combate (Parceria)</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 18. Eventos Integrados -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-handshake"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Eventos Integrados</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 19. Área Monitorada -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-satellite"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Área Monitorada</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+          <!-- 20. Autos de Infração -->
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
+                <i class="fa-solid fa-file-invoice"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="text-white text-[13px] font-bold leading-snug">Autos de Infração</h4>
+                <p class="text-slate-400 text-[9px] uppercase tracking-widest mt-1 font-bold">Pasta de Evidências</p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
  
   </main>
@@ -469,9 +1208,477 @@
 
 <footer class="site-footer">
   <p>Seção de Tecnologia da Informação e Comunicação - STIC/BM7 &copy; <span id="footer-year"></span></p>
-  <img src="img/Brasao_CTIBM7.png" alt="">
+  <img src="img/Brasao_CTIBM7.png" alt="Brasão">
 </footer>
  
-<script src="assets/js/app.js?v=19"></script>
+<script>
+/* =========================================================
+   CONFIGURAÇÃO E CONEXÃO DE DADOS
+   ========================================================= */
+const GOOGLE_SHEETS_ID = "1RrwaCAOjuDzU1_iIoMzUnEbcZgZO-ch7M4sLiYChYK8";
+const GOOGLE_SHEETS_BASE_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/gviz/tq`;
+const FALLBACK_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxFblw567V43nn-yzpIEe8NA92pZTMDTSCpBLd868PMjmJfSmKr8Pg-Q2vwEOjWDlM6/exec";
+const STATUS_UPDATE_URL = '/api/update-status';
+const SHEET_LOAD_TIMEOUT_MS = 2500;
+const SHEET_NAMES = {
+    indicadores: 'indicadores', helicoptero: 'helicoptero', combustivel: 'combustivel', seguro: 'seguro', prazo: 'prazo'
+};
+const MIN_LOADING_TIME_MS = 1400;
+const appStartTime = performance.now();
+
+let dados = [];
+let activeMetric = null;
+let barChartInstance = null;
+let pieChartInstance = null;
+let gaugeInstance = null;
+const STATUS_STORAGE_KEY = 'painel-cronograma-status';
+const STATUS_OPTIONS = ['Ausente', 'Andamento', 'Concluído'];
+const STATUS_TABLE_META = {
+    'tbody-helicoptero': { sheetName: 'helicoptero', taskColumn: 'Helicóptero' },
+    'tbody-combustivel': { sheetName: 'combustivel', taskColumn: 'Combustível - 150 horas' },
+    'tbody-seguro': { sheetName: 'seguro', taskColumn: 'Seguro' }
+};
+
+const colorMeta = '#1e3a5f';
+const pieColors = ['#e11d48', '#b7192a', '#96000a', '#c98b1f', '#7d1020', '#f0b43c', '#b45309', '#0d9488', '#0f766e', '#7d1020'];
+const fmt = (n) => new Intl.NumberFormat('pt-BR').format(n);
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Utility para pegar canvas de forma segura
+const canvasContext = (id) => {
+    const canvas = document.getElementById(id);
+    if (!canvas) {
+        console.warn(`Canvas não encontrado no HTML: ${id}. Aguardando recarga...`);
+        return null; 
+    }
+    return canvas.getContext('2d');
+};
+
+function aplicarCoresCardsDestaque() {
+    const cardTemporarios = document.querySelector('[data-metric="Contratação BM Temporários"]');
+    if (cardTemporarios instanceof HTMLElement) {
+        cardTemporarios.style.setProperty('background', 'linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%)', 'important');
+        cardTemporarios.style.setProperty('border-color', 'transparent', 'important');
+    }
+    const cardEfetivo = document.querySelector('.kpi-feature-green');
+    if (cardEfetivo instanceof HTMLElement) {
+        cardEfetivo.style.setProperty('background', 'linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%)', 'important');
+        cardEfetivo.style.setProperty('border-color', 'transparent', 'important');
+    }
+}
+
+/* =========================================================
+   MODAL DE EVIDÊNCIAS
+   ========================================================= */
+let currentZoom = 1, isDragging = false, startX = 0, startY = 0, translateX = 0, translateY = 0;
+const modalImg = document.getElementById('modal-img');
+const modalPdf = document.getElementById('modal-pdf');
+const modalOverlay = document.getElementById('modal-overlay');
+const modalWrapper = document.getElementById('modal-wrapper');
+const modalImageHint = document.getElementById('modal-image-hint');
+const modalZoomControls = document.querySelectorAll('.modal-zoom-control');
+const modalPdfLink = document.getElementById('modal-pdf-link');
+let activePdfSrc = '';
+let warmedPdfSrc = '';
+let pdfWarmupFrame = null;
+
+function setModalMode(mode) {
+    const isPdf = mode === 'pdf';
+    modalOverlay.classList.toggle('modal-pdf-mode', isPdf);
+    modalImg.classList.toggle('hidden', isPdf);
+    modalPdf.classList.toggle('hidden', !isPdf);
+    modalImageHint.classList.toggle('modal-pdf-hidden', isPdf);
+    modalZoomControls.forEach(control => control.classList.toggle('hidden', isPdf));
+    if (modalPdfLink) modalPdfLink.classList.toggle('hidden', isPdf || !activePdfSrc);
+}
+function showModal() {
+    modalOverlay.classList.remove('hidden');
+    modalOverlay.classList.add('flex');
+    document.body.classList.add('is-locked');
+}
+function openModal(src, pdfSrc) {
+    if (!src) return;
+    activePdfSrc = pdfSrc || '';
+    setModalMode('image');
+    modalWrapper.style.cssText = '';
+    modalPdf.style.cssText = 'width:min(920px,calc(100vw - 32px));height:calc(100vh - 96px);border:0;border-radius:12px;background:#1f1f1f;';
+    currentZoom = 1; translateX = 0; translateY = 0; updateTransform();
+    modalImg.src = src;
+    modalImg.onerror = function () {
+        this.onerror = null;
+        this.src = "https://placehold.co/800x600/0f172a/cbd5e1?text=Visualiza%C3%A7%C3%A3o+Indispon%C3%ADvel&font=Montserrat";
+    };
+    showModal();
+}
+function warmPdfPreview(pdfSrc) {
+    if (!pdfSrc || warmedPdfSrc === pdfSrc || modalPdf.src === pdfSrc) return;
+    warmedPdfSrc = pdfSrc;
+    if (!pdfWarmupFrame) {
+        pdfWarmupFrame = document.createElement('iframe');
+        pdfWarmupFrame.title = 'Pré-carregamento';
+        pdfWarmupFrame.referrerPolicy = 'no-referrer';
+        pdfWarmupFrame.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;left:-999px;';
+        document.body.appendChild(pdfWarmupFrame);
+    }
+    pdfWarmupFrame.src = pdfSrc;
+}
+function openPdfModal(pdfSrc) {
+    if (!pdfSrc && !activePdfSrc) {
+        mostrarToast("Documento PDF ainda não foi anexado.", true);
+        return;
+    }
+    activePdfSrc = pdfSrc || activePdfSrc;
+    setModalMode('pdf');
+    modalWrapper.style.cssText = 'overflow:hidden;align-items:stretch;justify-content:center;padding:76px 16px 16px;';
+    modalImg.src = ''; modalImg.style.transform = '';
+    modalPdf.style.cssText = 'display:block;width:min(920px,100%);height:100%;border:0;border-radius:12px;background:#1f1f1f;box-shadow:0 24px 70px rgba(0,0,0,.42);';
+    if (modalPdf.src !== activePdfSrc) modalPdf.src = activePdfSrc;
+    showModal();
+}
+function closeModal() {
+    modalOverlay.classList.add('hidden');
+    modalOverlay.classList.remove('flex');
+    modalOverlay.classList.remove('modal-pdf-mode');
+    document.body.classList.remove('is-locked');
+}
+function zoomImg(step) {
+    currentZoom = Math.min(4, Math.max(0.5, currentZoom + step));
+    updateTransform();
+}
+function updateTransform() {
+    modalImg.style.transform = `translate(${translateX}px,${translateY}px) scale(${currentZoom})`;
+    modalImg.style.cursor = currentZoom > 1 ? 'grab' : 'default';
+}
+
+modalWrapper.addEventListener('click', e => { if (e.target === modalWrapper) closeModal(); });
+modalWrapper.addEventListener('wheel', e => {
+    if (modalImg.classList.contains('hidden')) return;
+    e.preventDefault(); zoomImg(e.deltaY < 0 ? 0.15 : -0.15);
+}, { passive: false });
+modalImg.addEventListener('mousedown', e => {
+    if (currentZoom > 1) { isDragging = true; startX = e.clientX - translateX; startY = e.clientY - translateY; modalImg.style.cursor = 'grabbing'; }
+});
+window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    translateX = e.clientX - startX; translateY = e.clientY - startY; updateTransform();
+});
+window.addEventListener('mouseup', () => { isDragging = false; if (currentZoom > 1) modalImg.style.cursor = 'grab'; });
+
+/* =========================================================
+   LÓGICA DA PLANILHA
+   ========================================================= */
+function googleSheetUrl(sheetName, callbackName) {
+    const params = new URLSearchParams({ tqx: `out:json;responseHandler:${callbackName}`, sheet: sheetName });
+    return `${GOOGLE_SHEETS_BASE_URL}?${params.toString()}`;
+}
+function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+function parseGoogleVisualizationPayload(payload) {
+    if (payload.status !== 'ok') throw new Error('Erro ao ler planilha.');
+    const labels = payload.table.cols.map((col, index) => String(col.label || `col${index}`).trim());
+    return payload.table.rows.map(row => {
+        const item = {};
+        labels.forEach((label, index) => {
+            const cell = row.c?.[index];
+            item[label] = cell?.f ?? cell?.v ?? '';
+        });
+        return item;
+    }).filter(item => Object.values(item).some(v => v !== ''));
+}
+async function carregarAba(sheetName) {
+    return new Promise((resolve, reject) => {
+        const callbackName = `__painelSheets_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const script = document.createElement('script');
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (settled) return; settled = true; cleanup(); reject(new Error(`Timeout aba ${sheetName}.`));
+        }, SHEET_LOAD_TIMEOUT_MS);
+        const cleanup = () => { clearTimeout(timer); delete window[callbackName]; script.remove(); };
+        window[callbackName] = (payload) => {
+            if (settled) return; settled = true;
+            try { resolve(parseGoogleVisualizationPayload(payload)); } catch (e) { reject(e); } finally { cleanup(); }
+        };
+        script.onerror = () => { if (settled) return; settled = true; cleanup(); reject(new Error(`Erro script aba ${sheetName}.`)); };
+        script.src = googleSheetUrl(sheetName, callbackName);
+        document.head.appendChild(script);
+    });
+}
+async function carregarDadosPlanilha() {
+    try {
+        const [indicadores, helicoptero, combustivel, seguro, prazo] = await Promise.all([
+            carregarAba(SHEET_NAMES.indicadores), carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)
+        ]);
+        return { indicadores, helicoptero, combustivel, seguro, prazo };
+    } catch (error) {
+        console.warn('Fallback Planilha Google.');
+        return fetch(FALLBACK_WEB_APP_URL).then(res => res.json());
+    }
+}
+
+async function carregarPainelAPI(isRefresh = false) {
+    const refreshBtn = document.getElementById('btn-refresh');
+    if (isRefresh && refreshBtn) refreshBtn.classList.add('is-loading');
+    
+    try {
+        const dadosPlanilha = await carregarDadosPlanilha();
+        
+        dados = (dadosPlanilha.indicadores || []).map(item => {
+            const indicadorNome = String(item['Indicador'] || item['Indicador '] || "Desconhecido");
+            const metaNum = Number(item.Meta) || 0;
+            const qtdNum = Number(item.Quantidade) || 0;
+            return { indicador: indicadorNome, meta: metaNum, qtd: qtdNum, percent: metaNum > 0 ? (qtdNum / metaNum) * 100 : (qtdNum > 0 ? 100 : 0) };
+        });
+
+        // INJEÇÃO DA LISTA DE NOVOS INDICADORES SOLICITADOS
+        const novosIndicadores = [
+            { indicador: 'Infrações Administrativas', meta: 40, qtd: 12 },
+            { indicador: 'Perícia de Incêndios', meta: 30, qtd: 8 },
+            { indicador: 'Prevenção e Combate', meta: 20, qtd: 5 },
+            { indicador: 'Aeronave Remotamente Pilotada', meta: 15, qtd: 10 },
+            { indicador: 'Fogo Técnico', meta: 20, qtd: 0 },
+            { indicador: 'Campanhas', meta: 24, qtd: 6 },
+            { indicador: 'Semana de Prevenção', meta: 14, qtd: 2 },
+            { indicador: 'Missões de Combate', meta: 6000, qtd: 1500 },
+            { indicador: 'Operações de Fiscalização', meta: 32, qtd: 10 },
+            { indicador: 'Missões de Fiscalização', meta: 110, qtd: 45 },
+            { indicador: 'Capacitação de Brigadistas', meta: 500, qtd: 200 },
+            { indicador: 'Brigada Municipal Mista', meta: 100, qtd: 30 },
+            { indicador: 'Publicações', meta: 54, qtd: 18 },
+            { indicador: 'Focos de Calor', meta: 30431, qtd: 12000 },
+            { indicador: 'BM FEM Capacitadas', meta: 12, qtd: 4 },
+            { indicador: 'Op órgãos federais', meta: 6, qtd: 2 },
+            { indicador: 'Op de Combate', meta: 6, qtd: 1 },
+            { indicador: 'Eventos Integrados', meta: 10, qtd: 0 },
+            { indicador: 'Área Monitorada', meta: 50000, qtd: 0 },
+            { indicador: 'Autos de Infração', meta: 50, qtd: 0 }
+        ];
+
+        novosIndicadores.forEach(novo => {
+            const existe = dados.find(d => d.indicador && d.indicador.toLowerCase().includes(novo.indicador.toLowerCase()));
+            if (!existe) {
+                dados.push({ indicador: novo.indicador, meta: novo.meta, qtd: novo.qtd, percent: novo.meta > 0 ? (novo.qtd / novo.meta) * 100 : 0 });
+            }
+        });
+
+        atualizarCartoesKPI();
+        preencherTabela('tbody-helicoptero', dadosPlanilha.helicoptero, 'Helicóptero');
+        preencherTabela('tbody-combustivel', dadosPlanilha.combustivel, 'Combustível - 150 horas');
+        preencherTabela('tbody-seguro', dadosPlanilha.seguro, 'Seguro');
+        
+        // Setup Gauge
+        createGauge('gaugeValor', 45, 100, '#059669');
+        iniciarGraficos();
+        atualizarTimestamp();
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen && !isRefresh) {
+            const elapsed = performance.now() - appStartTime;
+            await wait(Math.max(0, MIN_LOADING_TIME_MS - elapsed));
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => loadingScreen.style.display = 'none', 600);
+        }
+        if (isRefresh) mostrarToast('Dados atualizados com sucesso.');
+    } catch (error) {
+        console.error("Falha ao carregar API:", error);
+        if (isRefresh) mostrarToast('Não foi possível atualizar.', true);
+        else document.getElementById('loading-screen').innerHTML = `<div class="loading-card"><div class="loading-logo loading-logo-error"><i class="fa-solid fa-triangle-exclamation"></i></div><h2 class="error-title">FALHA</h2><p>Verifique a conexão e tente novamente.</p><button class="retry-btn" data-action="reload"><i class="fa-solid fa-rotate-right"></i> Tentar novamente</button></div>`;
+    } finally {
+        if (refreshBtn) refreshBtn.classList.remove('is-loading');
+    }
+}
+function recarregar() { carregarPainelAPI(true); }
+function atualizarTimestamp() {
+    const el = document.getElementById('last-update');
+    if (el) el.textContent = `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`;
+}
+
+/* =========================================================
+   TABELAS E STATUS
+   ========================================================= */
+function getStatusTone(status) { return status === 'Concluído' ? 'ok' : (status === 'Andamento' ? 'run' : 'no'); }
+function preencherTabela(idElemento, dadosDaAba, nomeColuna) {
+    const tbody = document.getElementById(idElemento);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (!dadosDaAba || !dadosDaAba.length) { tbody.innerHTML = `<tr><td colspan="2" class="empty-state">Vazio</td></tr>`; return; }
+    
+    const overrides = JSON.parse(localStorage.getItem(STATUS_STORAGE_KEY) || '{}');
+    dadosDaAba.forEach(linha => {
+        const tr = document.createElement('tr');
+        const tarefa = linha[nomeColuna] || linha[Object.keys(linha)[1]] || "Desconhecida";
+        const statusKey = `${idElemento}::${tarefa.trim().toLowerCase()}`;
+        const status = overrides[statusKey] || (STATUS_OPTIONS.includes(linha['Status']) ? linha['Status'] : 'Ausente');
+        const tone = getStatusTone(status);
+        
+        tr.innerHTML = `
+          <td><div class="cell-task"><span class="dot ${tone}"></span><span class="txt">${esc(tarefa)}</span></div></td>
+          <td class="table-status-cell">
+            <select class="badge status-select ${tone}" data-status-key="${esc(statusKey)}">
+              ${STATUS_OPTIONS.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </td>`;
+        tbody.appendChild(tr);
+    });
+}
+document.addEventListener('change', event => {
+    const t = event.target;
+    if (!t.matches('.status-select[data-status-key]')) return;
+    const tone = getStatusTone(t.value);
+    t.className = `badge status-select ${tone}`;
+    t.closest('tr').querySelector('.dot').className = `dot ${tone}`;
+    const overrides = JSON.parse(localStorage.getItem(STATUS_STORAGE_KEY) || '{}');
+    overrides[t.dataset.statusKey] = t.value;
+    localStorage.setItem(STATUS_STORAGE_KEY, JSON.stringify(overrides));
+    mostrarToast('Status alterado (Apenas local)');
+});
+
+/* =========================================================
+   KPI E ANIMAÇÕES
+   ========================================================= */
+function animateCount(el, target) {
+    if (isNaN(target)) { el.textContent = '—'; return; }
+    const startTime = performance.now();
+    requestAnimationFrame(function frame(now) {
+        const p = Math.min(1, (now - startTime) / 950);
+        el.textContent = fmt(Math.round(target * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) requestAnimationFrame(frame);
+    });
+}
+function atualizarCartoesKPI() {
+    document.querySelectorAll('.kpi-card').forEach(card => {
+        const metricName = card.getAttribute('data-metric');
+        if (!metricName) return;
+        const match = dados.find(d => d.indicador && d.indicador.toLowerCase().includes(metricName.toLowerCase()));
+        if (!match) return;
+        const pct = Math.round(match.percent);
+        const tone = pct >= 100 ? 'ok' : (pct >= 50 ? 'warn' : 'low');
+        const spanNum = card.querySelector('.qtd-value');
+        if (spanNum) animateCount(spanNum, match.qtd);
+        const spanMeta = card.querySelector('.meta-value');
+        if (spanMeta) spanMeta.textContent = fmt(match.meta);
+        const pctEl = card.querySelector('.kpi-pct');
+        if (pctEl) { pctEl.textContent = pct + '%'; pctEl.dataset.tone = tone; }
+        const barEl = card.querySelector('.kpi-bar-fill');
+        if (barEl) { barEl.dataset.tone = tone; setTimeout(() => { barEl.style.width = Math.min(100, pct) + '%'; }, 120); }
+    });
+    aplicarCoresCardsDestaque();
+}
+
+/* =========================================================
+   GRÁFICOS CHART.JS
+   ========================================================= */
+Chart.register(ChartDataLabels);
+Chart.defaults.color = '#5b6b80'; Chart.defaults.font.family = 'Inter, sans-serif';
+
+function iniciarGraficos() {
+    if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+    if (pieChartInstance) { pieChartInstance.destroy(); pieChartInstance = null; }
+    
+    const labels = dados.map(d => d.indicador);
+    const dataMetaVisual = dados.map(() => 100); 
+    const dataQtdVisual = dados.map(d => Math.min(d.percent, 100));
+    
+    const ctxBar = canvasContext('barChart');
+    if (ctxBar) {
+        const gradientQtd = ctxBar.createLinearGradient(0, 0, 0, 400);
+        gradientQtd.addColorStop(0, '#34d399'); gradientQtd.addColorStop(1, '#059669');
+        
+        barChartInstance = new Chart(ctxBar, {
+            type: 'bar',
+            data: { labels, datasets: [
+                { label: 'Alvo / Meta', data: dataMetaVisual, backgroundColor: colorMeta, barPercentage: 0.82, categoryPercentage: 0.7, borderRadius: 4 },
+                { label: 'Executado', data: dataQtdVisual, backgroundColor: gradientQtd, barPercentage: 0.82, categoryPercentage: 0.7, borderRadius: 4 }
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 26 } },
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { color: '#5b6b80', usePointStyle: true, boxWidth: 9, font: { size: 12, weight: 'bold' } } },
+                    datalabels: { color: '#0f172a', anchor: 'end', align: 'top', font: { family: 'JetBrains Mono', size: 11, weight: 'bold' },
+                        formatter: (val, ctx) => {
+                            const isMeta = ctx.datasetIndex === 0;
+                            const real = isMeta ? dados[ctx.dataIndex].meta : dados[ctx.dataIndex].qtd;
+                            return real > 0 ? fmt(real) : '';
+                        } 
+                    },
+                    tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(15,23,42,.96)',
+                        callbacks: { label: (ctx) => {
+                            const isMeta = ctx.datasetIndex === 0;
+                            const real = isMeta ? dados[ctx.dataIndex].meta : dados[ctx.dataIndex].qtd;
+                            return ctx.dataset.label + ': ' + fmt(real);
+                        }}
+                    }
+                },
+                scales: {
+                    y: { max: 115, grid: { color: 'rgba(203,213,225,.45)', drawBorder: false }, ticks: { callback: v => v + '%' } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' }, maxRotation: 45, minRotation: 45 } }
+                }
+            }
+        });
+    }
+
+    const pieLabels = [], pieData = [];
+    dados.forEach(d => { if (d.percent > 0) { pieLabels.push(d.indicador); pieData.push(d.percent); } });
+    const ctxPie = canvasContext('pieChart');
+    if (ctxPie) {
+        pieChartInstance = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: { labels: pieLabels, datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#ffffff' }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '58%', plugins: { legend: { position: 'right' }, datalabels: { display: false } } }
+        });
+    }
+}
+function createGauge(ctxId, value, max, color) {
+    if (gaugeInstance) { gaugeInstance.destroy(); gaugeInstance = null; }
+    const ctx = canvasContext(ctxId);
+    if (!ctx) return;
+    gaugeInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { datasets: [{ data: [value, max - value], backgroundColor: [color, '#e2e8f0'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, circumference: 180, rotation: -90, cutout: '80%', plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+    });
+}
+
+function filterMetric(cardElement) {
+    if (!barChartInstance) return;
+    const metric = cardElement.getAttribute('data-metric');
+    const allCards = document.querySelectorAll('.kpi-card');
+    if (activeMetric === metric) {
+        activeMetric = null; allCards.forEach(c => c.classList.remove('kpi-active'));
+    } else {
+        activeMetric = metric; allCards.forEach(c => c.classList.remove('kpi-active'));
+        cardElement.classList.add('kpi-active');
+    }
+    const ctxBar = canvasContext('barChart');
+    const gradientQtd = ctxBar ? ctxBar.createLinearGradient(0, 0, 0, 400) : null;
+    if (gradientQtd) { gradientQtd.addColorStop(0, '#34d399'); gradientQtd.addColorStop(1, '#059669'); }
+    
+    barChartInstance.data.datasets[0].backgroundColor = dados.map(d => (activeMetric && !d.indicador.includes(activeMetric)) ? colorMeta + '20' : colorMeta);
+    barChartInstance.data.datasets[1].backgroundColor = dados.map(d => (activeMetric && !d.indicador.includes(activeMetric)) ? 'rgba(5,150,105,.12)' : (gradientQtd || '#059669'));
+    barChartInstance.update();
+}
+
+/* =========================================================
+   EVENTOS DOM
+   ========================================================= */
+document.addEventListener('click', event => {
+    let t = event.target.closest('[data-action], .ev-thumb, .ev-foot');
+    if (!t) return;
+    
+    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');
+    if (t.matches('.ev-foot')) openPdfModal(t.dataset.pdfSrc || '');
+    
+    if (t.dataset.action === 'close-modal') closeModal();
+    if (t.dataset.action === 'zoom-in') zoomImg(0.25);
+    if (t.dataset.action === 'zoom-out') zoomImg(-0.25);
+    if (t.dataset.action === 'refresh') recarregar();
+    if (t.dataset.action === 'reload') location.reload();
+    if (t.dataset.action === 'filter-metric') filterMetric(t);
+    if (t.dataset.action === 'open-pdf') openPdfModal(activePdfSrc);
+});
+window.addEventListener('DOMContentLoaded', () => {
+    aplicarCoresCardsDestaque();
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+    carregarPainelAPI(false);
+});
+</script>
 </body>
 </html>
