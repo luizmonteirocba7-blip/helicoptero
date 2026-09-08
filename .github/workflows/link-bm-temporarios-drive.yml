@@ -1,0 +1,62 @@
+name: Link BM Temporários Drive
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'index.html'
+
+permissions:
+  contents: write
+
+jobs:
+  update-evidence-link:
+    if: ${{ !contains(github.event.head_commit.message, 'BM-TEMP-DRIVE') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update evidence link
+        env:
+          DRIVE_URL: 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link'
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          target = '<h4 class="text-white text-[13px] font-bold leading-snug">Contratação BM Temporários</h4>'
+          start = text.find(target)
+          if start < 0:
+              raise SystemExit('Card BM Temporários não encontrado')
+
+          button_start = text.find('<button type="button"', start)
+          button_end = text.find('</button>', button_start)
+          block = text[button_start:button_end]
+          block = block.replace('data-pdf-src=""', 'data-pdf-src="' + os.environ['DRIVE_URL'] + '"', 1)
+          text = text[:button_start] + block + text[button_end:]
+
+          old = '''    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');
+    if (t.matches('.ev-foot')) openPdfModal(t.dataset.pdfSrc || '');'''
+          new = '''    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');
+    if (t.matches('.ev-foot')) {
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\.google\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          if old not in text:
+              raise SystemExit('Evento PDF não encontrado')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit update
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'chore: link BM Temporários evidence BM-TEMP-DRIVE'
+          git push
