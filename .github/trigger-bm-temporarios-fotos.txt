@@ -1,0 +1,1 @@
+Trigger deployment for BM Temporários PDF and photo Drive links.
