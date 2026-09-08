@@ -11,14 +11,16 @@ permissions:
 
 jobs:
   update-evidence-link:
-    if: ${{ !contains(github.event.head_commit.message, 'BM-TEMP-DRIVE') }}
+    if: ${{ !contains(github.event.head_commit.message, 'EVIDENCIA-LINK') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update BM Temporários links
+      - name: Update evidence links
         env:
-          PDF_URL: 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link'
-          PHOTO_URL: 'https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link'
+          BM_PDF_URL: 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link'
+          BM_PHOTO_URL: 'https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link'
+          PERICIA_PDF_URL: 'https://drive.google.com/file/d/1FjDXBWlrDa3TVy7DuCXhwwmYh18tgbti/view?usp=drive_link'
+          PERICIA_PHOTO_URL: 'https://drive.google.com/file/d/1-C5Un_uEKGxslKZBR1YTJds0NT8KelSd/view?usp=drive_link'
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -27,29 +29,30 @@ jobs:
 
           path = Path('index.html')
           text = path.read_text(encoding='utf-8')
-          marker = '<h4 class="text-white text-[13px] font-bold leading-snug">Contratação BM Temporários</h4>'
-          start = text.find(marker)
-          if start < 0:
-              raise SystemExit('Card BM Temporários não encontrado')
-          end = text.find('<!-- Contratação de BM Efetivo -->', start)
-          if end < 0:
-              raise SystemExit('Próximo card não encontrado')
 
-          section = text[start:end]
-          section2, pdf_count = re.subn(r'data-pdf-src="[^"]*"', 'data-pdf-src="' + os.environ['PDF_URL'] + '"', section, count=1)
-          if pdf_count != 1:
-              raise SystemExit('data-pdf-src não encontrado')
-          section3, photo_count = re.subn(r'data-modal-src="[^"]*"', 'data-modal-src="' + os.environ['PHOTO_URL'] + '" data-drive-link="1"', section2, count=1)
-          if photo_count != 1:
-              raise SystemExit('data-modal-src não encontrado')
+          def update_card(text, title, pdf_url, photo_url):
+              marker = f'<h4 class="text-white text-[13px] font-bold leading-snug">{title}</h4>'
+              start = text.find(marker)
+              if start < 0:
+                  raise SystemExit(f'Card não encontrado: {title}')
+              end_marker = '</div>\n\n          <!-- '
+              end = text.find(end_marker, start)
+              if end < 0:
+                  raise SystemExit(f'Limite do card não encontrado: {title}')
+              section = text[start:end]
 
-          text = text[:start] + section3 + text[end:]
+              section, n1 = re.subn(r'data-pdf-src="[^"]*"', 'data-pdf-src="' + pdf_url + '"', section, count=1)
+              if n1 != 1:
+                  raise SystemExit(f'PDF não encontrado: {title}')
 
-          old = """    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');\n    if (t.matches('.ev-foot')) openPdfModal(t.dataset.pdfSrc || '');"""
-          new = """    if (t.matches('.ev-thumb')) {\n        const src = t.dataset.modalSrc || '';\n        if (t.dataset.driveLink === '1' && src) {\n            window.open(src, '_blank', 'noopener,noreferrer');\n        } else {\n            openModal(src, t.dataset.pdfSrc || '');\n        }\n    }\n    if (t.matches('.ev-foot')) {\n        const pdfSrc = t.dataset.pdfSrc || '';\n        if (/drive\\.google\\.com/i.test(pdfSrc)) {\n            window.open(pdfSrc, '_blank', 'noopener,noreferrer');\n        } else {\n            openPdfModal(pdfSrc);\n        }\n    }"""
-          if old not in text:
-              raise SystemExit('Handler de evidências não encontrado')
-          text = text.replace(old, new, 1)
+              section, n2 = re.subn(r'data-modal-src="[^"]*"(?: data-drive-link="1")?', 'data-modal-src="' + photo_url + '" data-drive-link="1"', section, count=1)
+              if n2 != 1:
+                  raise SystemExit(f'Foto não encontrada: {title}')
+
+              return text[:start] + section + text[end:]
+
+          text = update_card(text, 'Contratação BM Temporários', os.environ['BM_PDF_URL'], os.environ['BM_PHOTO_URL'])
+          text = update_card(text, 'Perícia de Incêndios', os.environ['PERICIA_PDF_URL'], os.environ['PERICIA_PHOTO_URL'])
           path.write_text(text, encoding='utf-8')
           PY
 
@@ -59,5 +62,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: link BM Temporários PDF and photos BM-TEMP-DRIVE'
+          git commit -m 'chore: link Perícia de Incêndios evidence EVIDENCIA-LINK'
           git push
