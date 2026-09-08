@@ -21,6 +21,8 @@ jobs:
           BM_PHOTO_URL: 'https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link'
           PERICIA_PDF_URL: 'https://drive.google.com/file/d/1FjDXBWlrDa3TVy7DuCXhwwmYh18tgbti/view?usp=drive_link'
           PERICIA_PHOTO_URL: 'https://drive.google.com/file/d/1-C5Un_uEKGxslKZBR1YTJds0NT8KelSd/view?usp=drive_link'
+          PREVENCAO_PDF_URL: 'https://drive.google.com/file/d/1JNBcU7VElORtzT06ZWCmkkDqqZ02YN0l/view?usp=drive_link'
+          PREVENCAO_PHOTO_URL: 'https://drive.google.com/file/d/1W0bt7zebnpR1nW7-YL-Ac6IcC1B3yjQ7/view?usp=drive_link'
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -52,6 +54,7 @@ jobs:
 
           text = update_card(text, 'Contratação BM Temporários', os.environ['BM_PDF_URL'], os.environ['BM_PHOTO_URL'])
           text = update_card(text, 'Perícia de Incêndios', os.environ['PERICIA_PDF_URL'], os.environ['PERICIA_PHOTO_URL'])
+          text = update_card(text, 'Prevenção e Combate', os.environ['PREVENCAO_PDF_URL'], os.environ['PREVENCAO_PHOTO_URL'])
           path.write_text(text, encoding='utf-8')
           PY
 
@@ -61,5 +64,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: link Perícia de Incêndios evidence EVIDENCIA-LINK'
+          git commit -m 'chore: link Prevenção e Combate evidence EVIDENCIA-LINK'
           git push
