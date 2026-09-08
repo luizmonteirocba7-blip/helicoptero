@@ -35,10 +35,9 @@ jobs:
               start = text.find(marker)
               if start < 0:
                   raise SystemExit(f'Card não encontrado: {title}')
-              end_marker = '</div>\n\n          <!-- '
-              end = text.find(end_marker, start)
+              end = text.find('\n          <!-- ', start + len(marker))
               if end < 0:
-                  raise SystemExit(f'Limite do card não encontrado: {title}')
+                  raise SystemExit(f'Próximo card não encontrado: {title}')
               section = text[start:end]
 
               section, n1 = re.subn(r'data-pdf-src="[^"]*"', 'data-pdf-src="' + pdf_url + '"', section, count=1)
