@@ -15,9 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update evidence link
+      - name: Update evidence links
         env:
-          DRIVE_URL: 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link'
+          DRIVE_PDF_URL: 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link'
+          DRIVE_PHOTO_URL: 'https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link'
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -30,25 +31,52 @@ jobs:
           if start < 0:
               raise SystemExit('Card BM Temporários não encontrado')
 
-          button_start = text.find('<button type="button"', start)
-          button_end = text.find('</button>', button_start)
-          block = text[button_start:button_end]
-          block = block.replace('data-pdf-src=""', 'data-pdf-src="' + os.environ['DRIVE_URL'] + '"', 1)
-          text = text[:button_start] + block + text[button_end:]
+          card_end = text.find('</div>\n\n          <!-- Contratação de BM Efetivo -->', start)
+          if card_end < 0:
+              raise SystemExit('Limite do card BM Temporários não encontrado')
+          card = text[start:card_end]
+
+          pdf_button_start = card.find('<button type="button"')
+          pdf_button_end = card.find('</button>', pdf_button_start)
+          if pdf_button_start < 0 or pdf_button_end < 0:
+              raise SystemExit('Botão PDF não encontrado')
+          pdf_block = card[pdf_button_start:pdf_button_end]
+          pdf_block = pdf_block.replace('data-pdf-src=""', 'data-pdf-src="' + os.environ['DRIVE_PDF_URL'] + '"', 1)
+          card = card[:pdf_button_start] + pdf_block + card[pdf_button_end:]
+
+          photo_button_start = card.find('<button type="button"', pdf_button_end - pdf_button_start)
+          photo_button_end = card.find('</button>', photo_button_start)
+          if photo_button_start < 0 or photo_button_end < 0:
+              raise SystemExit('Botão Fotos não encontrado')
+          photo_block = card[photo_button_start:photo_button_end]
+          placeholder = 'data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat"'
+          if placeholder not in photo_block:
+              raise SystemExit('Placeholder do botão Fotos não encontrado')
+          photo_block = photo_block.replace(placeholder, 'data-modal-src="' + os.environ['DRIVE_PHOTO_URL'] + '" data-drive-link="1"', 1)
+          card = card[:photo_button_start] + photo_block + card[photo_button_end:]
+
+          text = text[:start] + card + text[card_end:]
 
           old = '''    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');
     if (t.matches('.ev-foot')) openPdfModal(t.dataset.pdfSrc || '');'''
-          new = '''    if (t.matches('.ev-thumb')) openModal(t.dataset.modalSrc || '', t.dataset.pdfSrc || '');
+          new = '''    if (t.matches('.ev-thumb')) {
+        const src = t.dataset.modalSrc || '';
+        if (t.dataset.driveLink === '1' && src) {
+            window.open(src, '_blank', 'noopener,noreferrer');
+        } else {
+            openModal(src, t.dataset.pdfSrc || '');
+        }
+    }
     if (t.matches('.ev-foot')) {
         const pdfSrc = t.dataset.pdfSrc || '';
-        if (/drive\.google\.com/i.test(pdfSrc)) {
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
             window.open(pdfSrc, '_blank', 'noopener,noreferrer');
         } else {
             openPdfModal(pdfSrc);
         }
     }'''
           if old not in text:
-              raise SystemExit('Evento PDF não encontrado')
+              raise SystemExit('Evento dos botões não encontrado')
           text = text.replace(old, new, 1)
           path.write_text(text, encoding='utf-8')
           PY
@@ -58,5 +86,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: link BM Temporários evidence BM-TEMP-DRIVE'
+          git commit -m 'chore: link BM Temporários PDF and photos BM-TEMP-DRIVE'
           git push
