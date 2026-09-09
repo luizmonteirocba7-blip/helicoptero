@@ -15,10 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch loading screen
+      - name: Patch index safely
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
@@ -26,12 +28,32 @@ jobs:
           if marker in text and 'style="display:none!important"' not in text[text.find(marker):text.find(marker)+300]:
               text = text.replace(marker, '<div id="loading-screen" style="display:none!important"', 1)
 
-          css = '''\n<style id="loading-screen-repair">\n#loading-screen {\n  display: none !important;\n  pointer-events: none !important;\n}\n#loading-screen.loading-screen-ready {\n  display: none !important;\n  opacity: 0 !important;\n  visibility: hidden !important;\n}\n</style>\n'''
-
+          css_loading = '''\n<style id="loading-screen-repair">\n#loading-screen {\n  display: none !important;\n  pointer-events: none !important;\n}\n#loading-screen.loading-screen-ready {\n  display: none !important;\n  opacity: 0 !important;\n  visibility: hidden !important;\n}\n</style>\n'''
           if 'id="loading-screen-repair"' not in text:
-              text = text.replace('</head>', css + '</head>', 1)
+              text = text.replace('</head>', css_loading + '</head>', 1)
 
+          # Remove previous evidence highlighters, then install one stable version.
+          text = re.sub(r'\n<style id="evidence-card-(?:status|missing)-styles">.*?</style>\n', '\n', text, flags=re.S)
+          text = re.sub(r'\n<script id="evidence-card-(?:status|missing)-script">.*?</script>\n', '\n', text, flags=re.S)
+
+          css_evidence = '''\n<style id="evidence-card-missing-styles">\n#evidencias .evidence-card-missing {\n  background: rgba(220, 38, 38, 0.20) !important;\n  border-color: rgba(248, 113, 113, 0.85) !important;\n  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18), 0 8px 24px rgba(127, 29, 29, 0.16) !important;\n}\n#evidencias .evidence-card-missing:hover {\n  background: rgba(220, 38, 38, 0.26) !important;\n  border-color: rgba(254, 202, 202, 0.95) !important;\n}\n</style>\n'''
+
+          js_evidence = '''\n<script id="evidence-card-missing-script">\n(function () {\n  function hasEvidence(el) {\n    if (!el) return false;\n    if (el.classList.contains('ev-foot')) {\n      var href = (el.getAttribute('href') || '').trim();\n      var pdf = (el.getAttribute('data-pdf-src') || '').trim();\n      return Boolean(href || pdf);\n    }\n    if (el.classList.contains('ev-thumb')) {\n      var src = (el.getAttribute('data-modal-src') || '').trim();\n      return Boolean(src) && !/placehold\\.co/i.test(src) && !/Aguardando\\+Fotos/i.test(src);\n    }\n    return false;\n  }\n\n  function applyEvidenceStatus() {\n    var area = document.getElementById('evidencias');\n    if (!area) return;\n    var grid = Array.from(area.querySelectorAll('.grid')).find(function (g) {\n      return g.querySelector('.ev-foot, .ev-thumb');\n    });\n    if (!grid) return;\n\n    grid.querySelectorAll(':scope > div').forEach(function (card) {\n      var controls = Array.from(card.querySelectorAll('.ev-foot, .ev-thumb'));\n      if (!controls.length) return;\n      card.classList.toggle('evidence-card-missing', !controls.every(hasEvidence));\n    });\n  }\n\n  function start() {\n    applyEvidenceStatus();\n    setTimeout(applyEvidenceStatus, 500);\n    setTimeout(applyEvidenceStatus, 1500);\n    setTimeout(applyEvidenceStatus, 3000);\n  }\n\n  if (document.readyState === 'loading') {\n    document.addEventListener('DOMContentLoaded', start, { once: true });\n  } else {\n    start();\n  }\n})();\n</script>\n'''
+
+          text = text.replace('</head>', css_evidence + '</head>', 1)
+          text = text.replace('</body>', js_evidence + '</body>', 1)
           p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert '<html' in html and '</html>' in html
+          assert html.count('id="evidence-card-missing-styles"') == 1
+          assert html.count('id="evidence-card-missing-script"') == 1
+          print('HTML validado')
           PY
 
       - name: Commit repair
@@ -40,5 +62,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: ocultar tela de carregamento imediatamente'
+          git commit -m 'fix: diferenciar evidencias pendentes sem alterar carregamento'
           git push
