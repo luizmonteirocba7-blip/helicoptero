@@ -1,0 +1,149 @@
+name: Fix Formação de Brigadistas
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - index.html
+
+permissions:
+  contents: write
+
+jobs:
+  patch-formation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch Formação de Brigadistas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          title = '<h4 class="text-white text-[13px] font-bold leading-snug">Formação de Brigadistas</h4>'
+          start = text.find(title)
+          if start == -1:
+              raise SystemExit('Card Formação de Brigadistas não encontrado')
+          end = text.find('<!-- 12. Brigada Municipal Mista -->', start)
+          if end == -1:
+              raise SystemExit('Fim do card Formação de Brigadistas não encontrado')
+
+          section = text[start:end]
+          pdf1 = 'https://drive.google.com/file/d/1jGIEOeilTNLV-EZdAKYwnkjEwDMSDzeV/view?usp=drive_link'
+          pdf2 = 'https://drive.google.com/file/d/1uITLqbhnyUfTvhaL-H0yzcvDZ0R9NGpl/view?usp=drive_link'
+          photo = 'https://drive.google.com/file/d/1xL-5IwBGNr4bHktosY6nRkIKGDqod0FQ/view?usp=drive_link'
+
+          section, n1 = re.subn(
+              r'data-pdf-src="[^"]*"',
+              f'data-pdf-list="{pdf1}||{pdf2}" data-pdf-src="{pdf1}"',
+              section,
+              count=1,
+          )
+          if n1 != 1:
+              raise SystemExit('Botão PDF da Formação não encontrado')
+
+          section, n2 = re.subn(
+              r'data-modal-src="[^"]*"(?: data-drive-link="1")?',
+              f'data-modal-src="{photo}" data-drive-link="1"',
+              section,
+              count=1,
+          )
+          if n2 != 1:
+              raise SystemExit('Botão FOTOS da Formação não encontrado')
+
+          text = text[:start] + section + text[end:]
+
+          helper = r'''
+function openFormationPdfChooser(urls) {
+    const existing = document.getElementById('formation-pdf-chooser');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'formation-pdf-chooser';
+    overlay.className = 'fixed inset-0 z-[1000000] flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4';
+    overlay.innerHTML = `
+      <div class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <h3 class="text-white text-base font-extrabold uppercase tracking-wide">Formação de Brigadistas</h3>
+            <p class="text-slate-400 text-xs mt-1">Selecione o documento que deseja abrir.</p>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-white text-xl leading-none" data-close-formation-pdfs aria-label="Fechar">&times;</button>
+        </div>
+        <div class="space-y-2">
+          <button type="button" class="w-full rounded-xl border border-slate-700 bg-slate-800 hover:bg-rose-600 px-4 py-3 text-left text-white font-bold transition flex items-center gap-3" data-formation-pdf="0">
+            <span class="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center"><i class="fa-regular fa-file-pdf"></i></span>
+            <span>PDF 1 — Formação de Brigadistas</span>
+          </button>
+          <button type="button" class="w-full rounded-xl border border-slate-700 bg-slate-800 hover:bg-rose-600 px-4 py-3 text-left text-white font-bold transition flex items-center gap-3" data-formation-pdf="1">
+            <span class="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center"><i class="fa-regular fa-file-pdf"></i></span>
+            <span>PDF 2 — Formação de Brigadistas</span>
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay || event.target.closest('[data-close-formation-pdfs]')) {
+            overlay.remove();
+            return;
+        }
+        const choice = event.target.closest('[data-formation-pdf]');
+        if (choice) {
+            const src = urls[Number(choice.dataset.formationPdf)] || '';
+            if (src) window.open(src, '_blank', 'noopener,noreferrer');
+            overlay.remove();
+        }
+    });
+}
+'''
+
+          anchor = '/* =========================================================\n   EVENTOS DOM\n   ========================================================= */'
+          if 'function openFormationPdfChooser(urls)' not in text:
+              if anchor not in text:
+                  raise SystemExit('Âncora de EVENTOS DOM não encontrada')
+              text = text.replace(anchor, '/* =========================================================\n   SELETOR DE PDFS DA FORMAÇÃO\n   ========================================================= */\n' + helper + '\n' + anchor, 1)
+
+          old_handler = '''    if (t.matches('.ev-foot')) {
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          new_handler = '''    if (t.matches('.ev-foot')) {
+        const pdfList = t.dataset.pdfList || '';
+        if (pdfList) {
+            const urls = pdfList.split('||').map(url => url.trim()).filter(Boolean);
+            if (urls.length > 1) {
+                openFormationPdfChooser(urls);
+                return;
+            }
+        }
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          if old_handler not in text:
+              raise SystemExit('Handler de PDF não encontrado')
+          text = text.replace(old_handler, new_handler, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: Formação de Brigadistas multi-PDF'
+          git push
