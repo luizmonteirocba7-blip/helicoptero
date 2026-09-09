@@ -310,6 +310,16 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
   .site-footer img{ height:3rem; }
 }
 </style>
+
+<style id="loading-screen-repair">
+#loading-screen {
+  pointer-events: none !important;
+}
+#loading-screen.loading-screen-ready {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+</style>
 </head>
  
 <body class="font-sans">
@@ -1693,6 +1703,30 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('footer-year').textContent = new Date().getFullYear();
     carregarPainelAPI(false);
 });
+</script>
+
+<script id="loading-screen-repair-script">
+(function () {
+  function hideLoading() {
+    var el = document.getElementById('loading-screen');
+    if (!el) return;
+    el.classList.add('loading-screen-ready');
+    el.setAttribute('aria-hidden', 'true');
+    setTimeout(function () {
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    }, 700);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', hideLoading, { once: true });
+  } else {
+    hideLoading();
+  }
+
+  window.addEventListener('load', hideLoading, { once: true });
+  setTimeout(hideLoading, 1200);
+  setTimeout(hideLoading, 4000);
+})();
 </script>
 </body>
 </html>
