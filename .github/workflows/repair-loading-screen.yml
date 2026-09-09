@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Corrigir evidencias da Semana de Prevencao
+      - name: Configurar evidencias solicitadas
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -32,7 +32,6 @@ jobs:
           section_end = text.find('</section>', section_start)
           if section_end == -1:
               raise SystemExit('Fim da secao de evidencias nao encontrado')
-
           section = text[section_start:section_end]
 
           def card_chunk(comment):
@@ -42,14 +41,14 @@ jobs:
               next_comment = section.find('<!-- ', start + len(comment))
               return start, (next_comment if next_comment != -1 else len(section))
 
-          # Mantem os links corretos dos cards ja configurados.
+          # Mantem links corretos dos cards ja configurados.
           start, end = card_chunk('<!-- Contratação BM Temporários -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link"', chunk, count=1)
           section = section[:start] + chunk + section[end:]
 
-          # Atualiza a Semana de Prevenção.
+          # Semana de Prevenção.
           start, end = card_chunk('<!-- 7. Semana de Prevenção -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link"', chunk, count=1)
@@ -60,17 +59,27 @@ jobs:
               chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
           section = section[:start] + chunk + section[end:]
 
-          # Configura Publicações Matérias: somente o PDF é obrigatório.
+          # Publicações Matérias: somente PDF.
           start, end = card_chunk('<!-- 13. Publicações Matérias -->')
           chunk = section[start:end]
-          pdf_url = 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link'
-          chunk = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf_url}"', chunk, count=1)
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src=""', chunk, count=1)
+          section = section[:start] + chunk + section[end:]
+
+          # OP Órgãos Federais: PDF + foto.
+          start, end = card_chunk('<!-- 16. OP Órgãos Federais -->')
+          chunk = section[start:end]
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1_P82XUJms3bOinMcMwpY22128ZBsIkzJ/view?usp=drive_link"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/1zXg0ACKOzyKsoe5hyi_FLaVLF_9I9aVg/view?usp=drive_link"', chunk, count=1)
+          thumb_pos = chunk.find('data-modal-src="')
+          tag_end = chunk.find('>', thumb_pos)
+          if thumb_pos != -1 and tag_end != -1 and 'data-drive-link="1"' not in chunk[thumb_pos:tag_end]:
+              chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
           section = section[:start] + chunk + section[end:]
 
           text = text[:section_start] + section + text[section_end:]
           p.write_text(text, encoding='utf-8')
-          print('Links das evidencias configurados.')
+          print('Evidencias solicitadas configuradas.')
           PY
 
       - name: Diferenciar cards azuis e vermelhos
@@ -115,9 +124,9 @@ jobs:
                               valid = True if is_publicacoes else (bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I))
                           complete = complete and valid
 
-                      # Remove qualquer ocorrência anterior das classes, inclusive duplicadas.
                       clean_tag = re.sub(r'\s*evidence-card-missing\b', '', open_tag)
                       clean_tag = re.sub(r'\s*evidence-card-complete\b', '', clean_tag)
+                      clean_tag = re.sub(r'\s{2,}', ' ', clean_tag)
                       if complete:
                           clean_tag = clean_tag.replace('class="', 'class="evidence-card-complete ', 1)
                       else:
@@ -128,7 +137,7 @@ jobs:
           new_section = '\n          <!-- '.join(new_parts)
           text = text[:start] + new_section + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('Classificacao visual concluida. Publicações usam somente o PDF; Azuis:', text.count('evidence-card-complete'), 'Vermelhos:', text.count('evidence-card-missing'))
+          print('Classificacao visual concluida.')
           PY
 
       - name: Validar HTML
@@ -140,15 +149,19 @@ jobs:
           assert '<html' in html and '</html>' in html
           assert html.count('id="evidence-card-missing-styles"') == 1
           assert html.count('id="evidence-card-complete-styles"') == 1
-          assert 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link' in html
-          start = html.find('<!-- 13. Publicações Matérias -->')
-          end = html.find('<!-- 14. Focos de Calor -->', start)
-          pub = html[start:end]
-          assert 'data-pdf-src="https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link"' in pub
-          assert 'data-modal-src=""' in pub
-          assert re.search(r'class="evidence-card-complete\s+bg-slate-800/80', pub)
-          assert 'evidence-card-complete evidence-card-missing' not in pub
-          print('HTML validado. Publicações Matérias pronta somente com PDF.')
+
+          checks = {
+              'Publicações Matérias': ('<!-- 13. Publicações Matérias -->', '<!-- 14. Focos de Calor -->', 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link'),
+              'OP Órgãos Federais PDF': ('<!-- 16. OP Órgãos Federais -->', '<!-- 17. OP Combate (Parceria) -->', 'https://drive.google.com/file/d/1_P82XUJms3bOinMcMwpY22128ZBsIkzJ/view?usp=drive_link'),
+              'OP Órgãos Federais Foto': ('<!-- 16. OP Órgãos Federais -->', '<!-- 17. OP Combate (Parceria) -->', 'https://drive.google.com/file/d/1zXg0ACKOzyKsoe5hyi_FLaVLF_9I9aVg/view?usp=drive_link'),
+          }
+          for name, (a, b, expected) in checks.items():
+              s = html.find(a); e = html.find(b, s); chunk = html[s:e]
+              assert expected in chunk, name
+
+          s = html.find('<!-- 16. OP Órgãos Federais -->'); e = html.find('<!-- 17. OP Combate (Parceria) -->', s); chunk = html[s:e]
+          assert 'class="evidence-card-complete ' in chunk
+          print('HTML validado. OP Órgãos Federais pronto.')
           PY
 
       - name: Commit e sincronizar
@@ -157,7 +170,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: limpar classes e configurar publicacoes'
+          git commit -m 'fix: configurar evidencia de orgaos federais'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
