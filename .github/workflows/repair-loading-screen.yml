@@ -21,7 +21,6 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
@@ -29,26 +28,37 @@ jobs:
           pdf_url = 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link'
           fotos_url = 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link'
 
-          start = text.find('<!-- 7. Semana de Prevenção -->')
-          end = text.find('<!-- 8. Missões de Combate -->', start)
-          if start == -1 or end == -1:
-              raise SystemExit('Cartao Semana de Prevenção nao encontrado')
+          anchor = text.find('fa-calendar-week')
+          if anchor == -1:
+              raise SystemExit('Icone da Semana de Prevenção nao encontrado')
 
-          chunk = text[start:end]
+          pdf_pos = text.find('data-pdf-src="', anchor)
+          if pdf_pos == -1:
+              raise SystemExit('Campo PDF da Semana de Prevenção nao encontrado')
+          pdf_value_start = pdf_pos + len('data-pdf-src="')
+          pdf_value_end = text.find('"', pdf_value_start)
+          if pdf_value_end == -1:
+              raise SystemExit('Fim do campo PDF nao encontrado')
+          text = text[:pdf_value_start] + pdf_url + text[pdf_value_end:]
 
-          # Troca somente os dois campos deste cartão.
-          pdf_match = re.search(r'data-pdf-src="([^"]*)"', chunk)
-          foto_match = re.search(r'data-modal-src="([^"]*)"', chunk)
-          if not pdf_match or not foto_match:
-              raise SystemExit('Campos PDF/Fotos nao encontrados no cartao')
+          foto_pos = text.find('data-modal-src="', anchor)
+          if foto_pos == -1:
+              raise SystemExit('Campo Fotos da Semana de Prevenção nao encontrado')
+          foto_value_start = foto_pos + len('data-modal-src="')
+          foto_value_end = text.find('"', foto_value_start)
+          if foto_value_end == -1:
+              raise SystemExit('Fim do campo Fotos nao encontrado')
+          text = text[:foto_value_start] + fotos_url + text[foto_value_end:]
 
-          chunk = chunk[:pdf_match.start()] + f'data-pdf-src="{pdf_url}"' + chunk[pdf_match.end():]
-          foto_match = re.search(r'data-modal-src="([^"]*)"', chunk)
-          chunk = chunk[:foto_match.start()] + f'data-modal-src="{fotos_url}" data-drive-link="1"' + chunk[foto_match.end():]
+          # Garante abertura direta do arquivo do Drive na nova aba.
+          tag_end = text.find('>', foto_pos)
+          if tag_end != -1:
+              tag = text[foto_pos:tag_end]
+              if 'data-drive-link="1"' not in tag:
+                  text = text[:tag_end] + ' data-drive-link="1"' + text[tag_end:]
 
-          text = text[:start] + chunk + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('Semana de Prevenção atualizada.')
+          print('Semana de Prevenção atualizada com sucesso.')
           PY
 
       - name: Validar HTML
@@ -56,9 +66,9 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
-          assert '<html' in html and '</html>' in html
           assert 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link' in html
           assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in html
+          assert '<html' in html and '</html>' in html
           print('HTML validado.')
           PY
 
@@ -68,7 +78,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: atualizar links da semana de prevencao'
+          git commit -m 'fix: aplicar links da semana de prevencao'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
