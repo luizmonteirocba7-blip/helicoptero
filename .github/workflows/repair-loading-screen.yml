@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Patch index safely
+      - name: Aplicar cor das caixas de evidencias
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -26,6 +26,7 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
+          # Mantem a tela de carregamento imediatamente oculta.
           marker = '<div id="loading-screen"'
           if marker in text and 'style="display:none!important"' not in text[text.find(marker):text.find(marker)+300]:
               text = text.replace(marker, '<div id="loading-screen" style="display:none!important"', 1)
@@ -34,39 +35,84 @@ jobs:
           if 'id="loading-screen-repair"' not in text:
               text = text.replace('</head>', css_loading + '</head>', 1)
 
+          # Remove rotinas anteriores de destaque para deixar uma unica regra estatica.
           text = re.sub(r'\n<style id="evidence-card-(?:status|missing)-styles">.*?</style>\n', '\n', text, flags=re.S)
           text = re.sub(r'\n<script id="evidence-card-(?:status|missing)-script">.*?</script>\n', '\n', text, flags=re.S)
-          text = re.sub(r'\n<style id="evidence-card-missing-styles">.*?</style>\n', '\n', text, flags=re.S)
-          text = re.sub(r'\n<script id="evidence-card-missing-script">.*?</script>\n', '\n', text, flags=re.S)
 
           css_evidence = '''\n<style id="evidence-card-missing-styles">\n#evidencias .evidence-card-missing {\n  background: rgba(220, 38, 38, 0.20) !important;\n  border-color: rgba(248, 113, 113, 0.85) !important;\n  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18), 0 8px 24px rgba(127, 29, 29, 0.16) !important;\n}\n#evidencias .evidence-card-missing:hover {\n  background: rgba(220, 38, 38, 0.26) !important;\n  border-color: rgba(254, 202, 202, 0.95) !important;\n}\n</style>\n'''
+          if 'id="evidence-card-missing-styles"' not in text:
+              text = text.replace('</head>', css_evidence + '</head>', 1)
 
-          js_evidence = '''\n<script id="evidence-card-missing-script">\n(function () {\n  function hasEvidence(el) {\n    if (!el) return false;\n    if (el.classList.contains('ev-foot')) {\n      var href = (el.getAttribute('href') || '').trim();\n      var pdf = (el.getAttribute('data-pdf-src') || '').trim();\n      return Boolean(href || pdf);\n    }\n    if (el.classList.contains('ev-thumb')) {\n      var src = (el.getAttribute('data-modal-src') || '').trim();\n      return Boolean(src) && !/placehold\\.co/i.test(src) && !/Aguardando\\+Fotos/i.test(src);\n    }\n    return false;\n  }\n\n  function applyEvidenceStatus() {\n    var area = document.getElementById('evidencias');\n    if (!area) return;\n    var grid = Array.from(area.querySelectorAll('.grid')).find(function (g) {\n      return g.querySelector('.ev-foot, .ev-thumb');\n    });\n    if (!grid) return;\n\n    grid.querySelectorAll(':scope > div').forEach(function (card) {\n      var controls = Array.from(card.querySelectorAll('.ev-foot, .ev-thumb'));\n      if (!controls.length) return;\n      card.classList.toggle('evidence-card-missing', !controls.every(hasEvidence));\n    });\n  }\n\n  function start() {\n    applyEvidenceStatus();\n    setTimeout(applyEvidenceStatus, 500);\n    setTimeout(applyEvidenceStatus, 1500);\n    setTimeout(applyEvidenceStatus, 3000);\n  }\n\n  if (document.readyState === 'loading') {\n    document.addEventListener('DOMContentLoaded', start, { once: true });\n  } else {\n    start();\n  }\n})();\n</script>\n'''
+          # Aplique classes diretamente no HTML, evitando depender de JavaScript em tempo de execucao.
+          start = text.find('<section id="evidencias"')
+          end = text.find('</section>', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Secao de evidencias nao encontrada')
+          section = text[start:end]
 
-          text = text.replace('</head>', css_evidence + '</head>', 1)
-          text = text.replace('</body>', js_evidence + '</body>', 1)
+          chunks = section.split('\n          <!-- ')
+          for i in range(1, len(chunks)):
+              chunk = '\n          <!-- ' + chunks[i]
+              open_pos = chunk.find('<div class="bg-slate-800/80')
+              if open_pos == -1:
+                  continue
+              open_end = chunk.find('>', open_pos)
+              if open_end == -1:
+                  continue
+              open_tag = chunk[open_pos:open_end + 1]
+
+              controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
+              if not controls:
+                  continue
+
+              complete = True
+              for control in controls:
+                  if re.search(r'\bev-foot\b', control):
+                      href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
+                      pdf = re.search(r'\bdata-pdf-src="([^"]*)"', control, flags=re.I)
+                      valid = bool((href and href.group(1).strip()) or (pdf and pdf.group(1).strip()))
+                  else:
+                      modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
+                      src = modal.group(1).strip() if modal else ''
+                      valid = bool(src) and not re.search(r'placehold\\.co|Aguardando\\+Fotos', src, flags=re.I)
+                  complete = complete and valid
+
+              new_tag = open_tag
+              if 'evidence-card-missing' in open_tag:
+                  new_tag = re.sub(r'\s+evidence-card-missing\b', '', open_tag)
+              if not complete:
+                  new_tag = new_tag.replace('class="bg-slate-800/80', 'class="evidence-card-missing bg-slate-800/80', 1)
+
+              chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, new_tag, 1)
+              chunks[i] = chunk[len('\n          <!-- '):]
+
+          text = '\n          <!-- '.join(chunks)
           p.write_text(text, encoding='utf-8')
           PY
 
-      - name: Validate
+      - name: Validar HTML
         run: |
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
           assert '<html' in html and '</html>' in html
           assert html.count('id="evidence-card-missing-styles"') == 1
-          assert html.count('id="evidence-card-missing-script"') == 1
           assert html.count('id="loading-screen-repair"') == 1
-          print('HTML validado')
+          missing = html.count('evidence-card-missing')
+          print(f'HTML validado. Cartoes pendentes: {missing}')
           PY
 
-      - name: Commit and sync with remote
+      - name: Commit e sincronizar
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: destacar caixas de evidencias pendentes'
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          git commit -m 'fix: destacar caixas sem comprovacao'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
