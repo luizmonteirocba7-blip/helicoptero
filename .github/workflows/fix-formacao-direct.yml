@@ -1,0 +1,44 @@
+name: Corrigir botão Formação de Brigadistas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-formacao-direct.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Corrigir index.html diretamente
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          repo = os.environ['GITHUB_REPOSITORY']
+          branch = 'main'
+          api = f'https://api.github.com/repos/{repo}/contents/index.html?ref={branch}'
+          req = urllib.request.Request(api, headers={'Authorization': f"Bearer {os.environ['GH_TOKEN']}", 'Accept': 'application/vnd.github+json'})
+          data = json.load(urllib.request.urlopen(req))
+          import base64
+          html = base64.b64decode(data['content']).decode('utf-8')
+          old_pdf = '<button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">\n                <i class="fa-solid fa-file-pdf"></i> PDF\n              </button>'
+          new_pdf = '<button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="https://drive.google.com/file/d/1VsFQJf7oqUxL7FXfQxdJxmsGZeorZujj/view?usp=drive_link">\n                <i class="fa-solid fa-file-pdf"></i> PDF\n              </button>'
+          old_photo = '<button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">\n                <i class="fa-solid fa-camera"></i> Fotos\n              </button>'
+          new_photo = '<button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://drive.google.com/file/d/1xL-5IwBGNr4bHktosY6nRkIKGDqod0FQ/view?usp=drive_link" data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos\n              </button>'
+          start = html.index('<!-- 11. Formação de Brigadistas -->')
+          end = html.index('<!-- 12. Brigada Municipal Mista -->', start)
+          section = html[start:end]
+          if old_pdf not in section or old_photo not in section:
+              raise SystemExit('Card alvo não está no estado esperado; nenhuma alteração feita.')
+          section = section.replace(old_pdf, new_pdf, 1).replace(old_photo, new_photo, 1)
+          html = html[:start] + section + html[end:]
+          payload = json.dumps({'message':'fix: atualizar PDF e fotos de Formação de Brigadistas','content':base64.b64encode(html.encode()).decode(),'sha':data['sha'],'branch':branch}).encode()
+          put = urllib.request.Request(api.split('?')[0], data=payload, method='PUT', headers={'Authorization': f"Bearer {os.environ['GH_TOKEN']}", 'Accept':'application/vnd.github+json','Content-Type':'application/json'})
+          result = urllib.request.urlopen(put).read().decode()
+          print(result)
+          PY
