@@ -1,0 +1,109 @@
+name: Fix Formação de Brigadistas
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - index.html
+
+permissions:
+  contents: write
+
+jobs:
+  fix-formacao:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch card
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          title = '<h4 class="text-white text-[13px] font-bold leading-snug">Formação de Brigadistas</h4>'
+          start = html.find(title)
+          end = html.find('<!-- 12. Brigada Municipal Mista -->', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Card Formação de Brigadistas não encontrado')
+
+          section = html[start:end]
+          pdf1 = 'https://drive.google.com/file/d/1jGIEOeilTNLV-EZdAKYwnkjEwDMSDzeV/view?usp=drive_link'
+          pdf2 = 'https://drive.google.com/file/d/1uITLqbhnyUfTvhaL-H0yzcvDZ0R9NGpl/view?usp=drive_link'
+          photo = 'https://drive.google.com/file/d/1xL-5IwBGNr4bHktosY6nRkIKGDqod0FQ/view?usp=drive_link'
+
+          section = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-list="{pdf1}||{pdf2}" data-pdf-src="{pdf1}"', section, count=1)
+          section = re.sub(r'data-modal-src="[^"]*"(?: data-drive-link="1")?', f'data-modal-src="{photo}" data-drive-link="1"', section, count=1)
+          html = html[:start] + section + html[end:]
+
+          marker = 'document.addEventListener(\'click\', event => {'
+          if 'data-pdf-list' in section and 'openFormationPdfChooser' not in html:
+              helper = r'''
+function openFormationPdfChooser(urls) {
+    const existing = document.getElementById('formation-pdf-chooser');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'formation-pdf-chooser';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,.84);backdrop-filter:blur(6px);padding:20px;';
+    overlay.innerHTML = '<div style="width:min(440px,100%);background:#0f172a;border:1px solid #334155;border-radius:18px;padding:22px;box-shadow:0 30px 70px rgba(0,0,0,.45);font-family:Inter,sans-serif"><div style="display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:18px"><div><div style="color:#fff;font-size:18px;font-weight:800">Formação de Brigadistas</div><div style="color:#94a3b8;font-size:12px;margin-top:4px">Selecione o documento que deseja abrir.</div></div><button type="button" data-close-formation style="color:#94a3b8;background:transparent;border:0;font-size:24px;cursor:pointer">&times;</button></div><div style="display:grid;gap:10px"><button type="button" data-formation-index="0" style="width:100%;padding:13px 14px;text-align:left;color:#fff;background:#1e293b;border:1px solid #334155;border-radius:12px;font:700 13px Inter,sans-serif;cursor:pointer"><i class="fa-regular fa-file-pdf" style="margin-right:9px;color:#fb7185"></i>PDF 1 — Formação de Brigadistas</button><button type="button" data-formation-index="1" style="width:100%;padding:13px 14px;text-align:left;color:#fff;background:#1e293b;border:1px solid #334155;border-radius:12px;font:700 13px Inter,sans-serif;cursor:pointer"><i class="fa-regular fa-file-pdf" style="margin-right:9px;color:#fb7185"></i>PDF 2 — Formação de Brigadistas</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay || event.target.closest('[data-close-formation]')) { overlay.remove(); return; }
+        const button = event.target.closest('[data-formation-index]');
+        if (button) {
+            const src = urls[Number(button.dataset.formationIndex)] || '';
+            if (src) window.open(src, '_blank', 'noopener,noreferrer');
+            overlay.remove();
+        }
+    });
+}
+'''
+              if marker not in html:
+                  raise SystemExit('Handler DOM não encontrado')
+              html = html.replace(marker, helper + '\n' + marker, 1)
+
+          old = '''    if (t.matches('.ev-foot')) {
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          new = '''    if (t.matches('.ev-foot')) {
+        const pdfList = t.dataset.pdfList || '';
+        if (pdfList) {
+            const urls = pdfList.split('||').map(url => url.trim()).filter(Boolean);
+            if (urls.length > 1) { openFormationPdfChooser(urls); return; }
+        }
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          if old not in html:
+              raise SystemExit('Bloco do botão PDF não encontrado')
+          html = html.replace(old, new, 1)
+          path.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: links da Formação de Brigadistas'
+          git push
