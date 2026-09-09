@@ -338,6 +338,18 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
   border-color: rgba(254, 202, 202, 0.95) !important;
 }
 </style>
+
+<style id="evidence-card-complete-styles">
+#evidencias .evidence-card-complete {
+  background: rgba(30, 64, 175, 0.32) !important;
+  border-color: rgba(96, 165, 250, 0.72) !important;
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16), 0 8px 24px rgba(30, 64, 175, 0.18) !important;
+}
+#evidencias .evidence-card-complete:hover {
+  background: rgba(30, 64, 175, 0.40) !important;
+  border-color: rgba(147, 197, 253, 0.90) !important;
+}
+</style>
 </head>
  
 <body class="font-sans">
@@ -766,7 +778,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           
           <!-- Contratação BM Temporários -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-user-plus"></i>
@@ -787,7 +799,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- Contratação de BM Efetivo -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-shield-halved"></i>
@@ -808,7 +820,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 1. Infrações Administrativas -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-gavel"></i>
@@ -829,7 +841,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 2. Perícia de Incêndios -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-magnifying-glass-plus"></i>
@@ -850,7 +862,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 3. Prevenção e Combate -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-fire-extinguisher"></i>
@@ -871,7 +883,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 4. Aeronave Remotamente Pilotada -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-plane-up"></i>
@@ -892,7 +904,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 5. Fogo Técnico -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-fire-flame-curved"></i>
@@ -913,7 +925,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 6. Campanhas -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-bullhorn"></i>
@@ -934,7 +946,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 7. Semana de Prevenção -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-calendar-week"></i>
@@ -955,7 +967,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 8. Missões de Combate -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-truck-fast"></i>
@@ -976,7 +988,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 9. Operações de Fiscalização -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-clipboard-check"></i>
@@ -997,7 +1009,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 10. Missões de Fiscalização -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-map-location-dot"></i>
@@ -1018,7 +1030,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 11. Formação de Brigadistas -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-users-gear"></i>
@@ -1039,7 +1051,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 12. Brigada Municipal Mista -->
-          <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-people-group"></i>
@@ -1060,7 +1072,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 13. Publicações Matérias -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-book-open"></i>
@@ -1081,7 +1093,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 14. Focos de Calor -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-fire"></i>
@@ -1102,7 +1114,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 15. BM FEM Capacitadas -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-person-military-pointing"></i>
@@ -1123,7 +1135,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 16. OP Órgãos Federais -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-handshake-angle"></i>
@@ -1144,7 +1156,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 17. OP Combate (Parceria) -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-people-carry-box"></i>
@@ -1165,7 +1177,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 18. Eventos Integrados -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-handshake"></i>
@@ -1186,7 +1198,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 19. Área Monitorada -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-satellite"></i>
@@ -1207,7 +1219,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 20. Autos de Infração -->
-          <div class="evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing evidence-card-missing bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-file-invoice"></i>
