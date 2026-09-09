@@ -41,14 +41,12 @@ jobs:
               next_comment = section.find('<!-- ', start + len(comment))
               return start, (next_comment if next_comment != -1 else len(section))
 
-          # Mantem links corretos dos cards ja configurados.
           start, end = card_chunk('<!-- Contratação BM Temporários -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link"', chunk, count=1)
           section = section[:start] + chunk + section[end:]
 
-          # Semana de Prevenção.
           start, end = card_chunk('<!-- 7. Semana de Prevenção -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link"', chunk, count=1)
@@ -59,18 +57,26 @@ jobs:
               chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
           section = section[:start] + chunk + section[end:]
 
-          # Publicações Matérias: somente PDF.
           start, end = card_chunk('<!-- 13. Publicações Matérias -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src=""', chunk, count=1)
           section = section[:start] + chunk + section[end:]
 
-          # OP Órgãos Federais: PDF + foto.
           start, end = card_chunk('<!-- 16. OP Órgãos Federais -->')
           chunk = section[start:end]
           chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1_P82XUJms3bOinMcMwpY22128ZBsIkzJ/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/1zXg0ACKOzyKsoe5hyi_FLaVLF_9I9aVg/view?usp=drive_link"', chunk, count=1)
+          thumb_pos = chunk.find('data-modal-src="')
+          tag_end = chunk.find('>', thumb_pos)
+          if thumb_pos != -1 and tag_end != -1 and 'data-drive-link="1"' not in chunk[thumb_pos:tag_end]:
+              chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
+          section = section[:start] + chunk + section[end:]
+
+          start, end = card_chunk('<!-- 15. BM FEM Capacitadas -->')
+          chunk = section[start:end]
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1_iIeNS5O1yvAGA2rG6OP9zTaB8LCd46S/view?usp=drive_link"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/1_h7XK1TZt0Qbfuut5sEso4VvqTWcKR2-/view?usp=drive_link"', chunk, count=1)
           thumb_pos = chunk.find('data-modal-src="')
           tag_end = chunk.find('>', thumb_pos)
           if thumb_pos != -1 and tag_end != -1 and 'data-drive-link="1"' not in chunk[thumb_pos:tag_end]:
@@ -154,14 +160,16 @@ jobs:
               'Publicações Matérias': ('<!-- 13. Publicações Matérias -->', '<!-- 14. Focos de Calor -->', 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link'),
               'OP Órgãos Federais PDF': ('<!-- 16. OP Órgãos Federais -->', '<!-- 17. OP Combate (Parceria) -->', 'https://drive.google.com/file/d/1_P82XUJms3bOinMcMwpY22128ZBsIkzJ/view?usp=drive_link'),
               'OP Órgãos Federais Foto': ('<!-- 16. OP Órgãos Federais -->', '<!-- 17. OP Combate (Parceria) -->', 'https://drive.google.com/file/d/1zXg0ACKOzyKsoe5hyi_FLaVLF_9I9aVg/view?usp=drive_link'),
+              'BM FEM PDF': ('<!-- 15. BM FEM Capacitadas -->', '<!-- 16. OP Órgãos Federais -->', 'https://drive.google.com/file/d/1_iIeNS5O1yvAGA2rG6OP9zTaB8LCd46S/view?usp=drive_link'),
+              'BM FEM Foto': ('<!-- 15. BM FEM Capacitadas -->', '<!-- 16. OP Órgãos Federais -->', 'https://drive.google.com/file/d/1_h7XK1TZt0Qbfuut5sEso4VvqTWcKR2-/view?usp=drive_link'),
           }
           for name, (a, b, expected) in checks.items():
               s = html.find(a); e = html.find(b, s); chunk = html[s:e]
               assert expected in chunk, name
 
-          s = html.find('<!-- 16. OP Órgãos Federais -->'); e = html.find('<!-- 17. OP Combate (Parceria) -->', s); chunk = html[s:e]
-          assert 'class="evidence-card-complete ' in chunk
-          print('HTML validado. OP Órgãos Federais pronto.')
+          s = html.find('<!-- 15. BM FEM Capacitadas -->'); e = html.find('<!-- 16. OP Órgãos Federais -->', s); fem = html[s:e]
+          assert re.search(r'class="evidence-card-complete\s+bg-slate-800/80', fem)
+          print('HTML validado. BM FEM Capacitadas configurada.')
           PY
 
       - name: Commit e sincronizar
@@ -170,7 +178,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: configurar evidencia de orgaos federais'
+          git commit -m 'fix: configurar evidencia bm fem'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
