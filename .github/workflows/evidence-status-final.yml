@@ -20,78 +20,16 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import re
-
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
-
-          # Remove somente versões anteriores das rotinas de destaque, sem tocar
-          # no restante do painel nem na lógica de carregamento.
           text = re.sub(r'\n<style id="evidence-card-(?:status|missing)-styles">.*?</style>\n', '\n', text, flags=re.S)
           text = re.sub(r'\n<script id="evidence-card-(?:status|missing)-script">.*?</script>\n', '\n', text, flags=re.S)
-
-          css = r'''
-<style id="evidence-card-missing-styles">
-#evidencias .evidence-card-missing {
-  background: linear-gradient(145deg, rgba(127,29,29,.48), rgba(220,38,38,.18)) !important;
-  border-color: rgba(248,113,113,.82) !important;
-  box-shadow: inset 0 0 0 1px rgba(248,113,113,.18), 0 8px 22px rgba(127,29,29,.14) !important;
-}
-#evidencias .evidence-card-missing:hover {
-  background: linear-gradient(145deg, rgba(127,29,29,.56), rgba(220,38,38,.24)) !important;
-  border-color: rgba(254,202,202,.95) !important;
-}
-</style>
-'''
-
-          js = r'''
-<script id="evidence-card-missing-script">
-(function () {
-  function hasEvidence(el) {
-    if (!el) return false;
-    if (el.classList.contains('ev-foot')) {
-      const href = (el.getAttribute('href') || '').trim();
-      const src = (el.getAttribute('data-pdf-src') || '').trim();
-      return !!(href || src);
-    }
-    if (el.classList.contains('ev-thumb')) {
-      const src = (el.getAttribute('data-modal-src') || '').trim();
-      return !!src && !/placehold\.co/i.test(src) && !/Aguardando\+Fotos/i.test(src);
-    }
-    return true;
-  }
-
-  function updateEvidenceCards() {
-    const area = document.getElementById('evidencias');
-    if (!area) return;
-
-    area.querySelectorAll('.bg-slate-800\\/80').forEach(function (card) {
-      const pdfs = Array.from(card.querySelectorAll('.ev-foot'));
-      const photos = Array.from(card.querySelectorAll('.ev-thumb'));
-      const controls = pdfs.concat(photos);
-      if (!controls.length) return;
-
-      const complete = controls.every(hasEvidence);
-      card.classList.toggle('evidence-card-missing', !complete);
-    });
-  }
-
-  function start() {
-    updateEvidenceCards();
-    setTimeout(updateEvidenceCards, 1000);
-    setTimeout(updateEvidenceCards, 2500);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
-  } else {
-    start();
-  }
-})();
-</script>
-'''
-
-          text = text.replace('</head>', css + '\n</head>', 1)
-          text = text.replace('</body>', js + '\n</body>', 1)
+          css = '''\n<style id="evidence-card-missing-styles">\n#evidencias .evidence-card-missing {\n  background: linear-gradient(145deg, rgba(127,29,29,.48), rgba(220,38,38,.18)) !important;\n  border-color: rgba(248,113,113,.82) !important;\n  box-shadow: inset 0 0 0 1px rgba(248,113,113,.18), 0 8px 22px rgba(127,29,29,.14) !important;\n}\n#evidencias .evidence-card-missing:hover {\n  background: linear-gradient(145deg, rgba(127,29,29,.56), rgba(220,38,38,.24)) !important;\n  border-color: rgba(254,202,202,.95) !important;\n}\n</style>\n'''
+          js = '''\n<script id="evidence-card-missing-script">\n(function () {\n  function hasEvidence(el) {\n    if (!el) return false;\n    if (el.classList.contains('ev-foot')) {\n      return Boolean(((el.getAttribute('href') || '') || (el.getAttribute('data-pdf-src') || '')).trim());\n    }\n    if (el.classList.contains('ev-thumb')) {\n      const src = (el.getAttribute('data-modal-src') || '').trim();\n      return Boolean(src) && !/placehold\\.co/i.test(src) && !/Aguardando\\+Fotos/i.test(src);\n    }\n    return true;\n  }\n  function updateEvidenceCards() {\n    const area = document.getElementById('evidencias');\n    if (!area) return;\n    area.querySelectorAll('.bg-slate-800\\/80').forEach(function (card) {\n      const controls = Array.from(card.querySelectorAll('.ev-foot, .ev-thumb'));\n      if (!controls.length) return;\n      card.classList.toggle('evidence-card-missing', !controls.every(hasEvidence));\n    });\n  }\n  function start() {\n    updateEvidenceCards();\n    setTimeout(updateEvidenceCards, 1000);\n    setTimeout(updateEvidenceCards, 2500);\n  }\n  if (document.readyState === 'loading') {\n    document.addEventListener('DOMContentLoaded', start, { once: true });\n  } else {\n    start();\n  }\n})();\n</script>\n'''
+          if 'evidence-card-missing-styles' not in text:
+              text = text.replace('</head>', css + '</head>', 1)
+          if 'evidence-card-missing-script' not in text:
+              text = text.replace('</body>', js + '</body>', 1)
           p.write_text(text, encoding='utf-8')
           PY
 
