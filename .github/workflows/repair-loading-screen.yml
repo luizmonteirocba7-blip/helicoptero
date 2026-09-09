@@ -135,6 +135,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           html = Path('index.html').read_text(encoding='utf-8')
           assert '<html' in html and '</html>' in html
           assert html.count('id="evidence-card-missing-styles"') == 1
