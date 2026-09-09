@@ -146,6 +146,42 @@ jobs:
           print('Classificacao visual concluida.')
           PY
 
+      - name: Corrigir especificamente BM FEM para azul
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          section_start = text.find('<section id="evidencias"')
+          section_end = text.find('</section>', section_start)
+          section = text[section_start:section_end]
+
+          card_start = section.find('<!-- 15. BM FEM Capacitadas -->')
+          card_end = section.find('<!-- 16. OP Órgãos Federais -->', card_start)
+          if card_start == -1 or card_end == -1:
+              raise SystemExit('Cartao BM FEM nao encontrado')
+
+          chunk = section[card_start:card_end]
+          open_pos = chunk.find('<div class="')
+          open_end = chunk.find('>', open_pos)
+          if open_pos == -1 or open_end == -1:
+              raise SystemExit('Tag do card BM FEM nao encontrada')
+
+          open_tag = chunk[open_pos:open_end + 1]
+          clean_tag = re.sub(r'\s*evidence-card-missing\b', '', open_tag)
+          clean_tag = re.sub(r'\s*evidence-card-complete\b', '', clean_tag)
+          clean_tag = re.sub(r'\s{2,}', ' ', clean_tag)
+          clean_tag = clean_tag.replace('class="', 'class="evidence-card-complete ', 1)
+          chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, clean_tag, 1)
+
+          section = section[:card_start] + chunk + section[card_end:]
+          text = text[:section_start] + section + text[section_end:]
+          p.write_text(text, encoding='utf-8')
+          print('BM FEM Capacitadas forcada como card azul.')
+          PY
+
       - name: Validar HTML
         run: |
           python - <<'PY'
@@ -169,7 +205,8 @@ jobs:
 
           s = html.find('<!-- 15. BM FEM Capacitadas -->'); e = html.find('<!-- 16. OP Órgãos Federais -->', s); fem = html[s:e]
           assert re.search(r'class="evidence-card-complete\s+bg-slate-800/80', fem)
-          print('HTML validado. BM FEM Capacitadas configurada.')
+          assert 'evidence-card-missing' not in fem.split('>')[0]
+          print('HTML validado. BM FEM Capacitadas configurada como azul.')
           PY
 
       - name: Commit e sincronizar
@@ -178,7 +215,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: configurar evidencia bm fem'
+          git commit -m 'fix: garantir bm fem azul'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
