@@ -42,71 +42,96 @@ jobs:
               next_comment = section.find('<!-- ', start + len(comment))
               return start, (next_comment if next_comment != -1 else len(section))
 
-          # Restaura os links originais do primeiro card, que foram alterados por uma rotina anterior.
+          # Mantem os links corretos dos cards ja configurados.
           start, end = card_chunk('<!-- Contratação BM Temporários -->')
           chunk = section[start:end]
-          chunk = re.sub(
-              r'data-pdf-src="[^"]*"',
-              'data-pdf-src="https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
-          chunk = re.sub(
-              r'data-modal-src="[^"]*"',
-              'data-modal-src="https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link"', chunk, count=1)
           section = section[:start] + chunk + section[end:]
 
-          # Localiza a Semana de Prevenção somente dentro da seção de evidências.
+          # Atualiza a Semana de Prevenção.
           start, end = card_chunk('<!-- 7. Semana de Prevenção -->')
           chunk = section[start:end]
-          chunk = re.sub(
-              r'data-pdf-src="[^"]*"',
-              'data-pdf-src="https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
-          chunk = re.sub(
-              r'data-modal-src="[^"]*"',
-              'data-modal-src="https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
-          if 'data-drive-link="1"' not in chunk:
-              thumb_pos = chunk.find('data-modal-src="')
-              tag_end = chunk.find('>', thumb_pos)
-              if thumb_pos != -1 and tag_end != -1:
-                  chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link"', chunk, count=1)
+          thumb_pos = chunk.find('data-modal-src="')
+          tag_end = chunk.find('>', thumb_pos)
+          if thumb_pos != -1 and tag_end != -1 and 'data-drive-link="1"' not in chunk[thumb_pos:tag_end]:
+              chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
           section = section[:start] + chunk + section[end:]
 
           text = text[:section_start] + section + text[section_end:]
           p.write_text(text, encoding='utf-8')
-          print('Links da Semana de Prevenção corrigidos.')
+          print('Links das evidencias configurados.')
+          PY
+
+      - name: Diferenciar cards azuis e vermelhos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          css_blue = '''\n<style id="evidence-card-complete-styles">\n#evidencias .evidence-card-complete {\n  background: rgba(30, 64, 175, 0.32) !important;\n  border-color: rgba(96, 165, 250, 0.72) !important;\n  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.16), 0 8px 24px rgba(30, 64, 175, 0.18) !important;\n}\n#evidencias .evidence-card-complete:hover {\n  background: rgba(30, 64, 175, 0.40) !important;\n  border-color: rgba(147, 197, 253, 0.90) !important;\n}\n</style>\n'''
+          if 'id="evidence-card-complete-styles"' not in text:
+              text = text.replace('</head>', css_blue + '</head>', 1)
+
+          start = text.find('<section id="evidencias"')
+          end = text.find('</section>', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Secao de evidencias nao encontrada')
+          section = text[start:end]
+
+          parts = section.split('\n          <!-- ')
+          new_parts = [parts[0]]
+          for raw in parts[1:]:
+              chunk = '\n          <!-- ' + raw
+              open_pos = chunk.find('<div class="')
+              if open_pos != -1:
+                  open_end = chunk.find('>', open_pos)
+                  open_tag = chunk[open_pos:open_end + 1] if open_end != -1 else ''
+                  if open_tag and 'bg-slate-800/80' in open_tag and re.search(r'\bev-(?:foot|thumb)\b', chunk):
+                      controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
+                      complete = bool(controls)
+                      for control in controls:
+                          if re.search(r'\bev-foot\b', control):
+                              href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
+                              pdf = re.search(r'\bdata-pdf-src="([^"]*)"', control, flags=re.I)
+                              valid = bool((href and href.group(1).strip()) or (pdf and pdf.group(1).strip()))
+                          else:
+                              modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
+                              src = modal.group(1).strip() if modal else ''
+                              valid = bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I)
+                          complete = complete and valid
+
+                      clean_tag = re.sub(r'\sevidence-card-missing\b', '', open_tag)
+                      clean_tag = re.sub(r'\sevidence-card-complete\b', '', clean_tag)
+                      if complete:
+                          clean_tag = clean_tag.replace('class="', 'class="evidence-card-complete ', 1)
+                      else:
+                          clean_tag = clean_tag.replace('class="', 'class="evidence-card-missing ', 1)
+                      chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, clean_tag, 1)
+              new_parts.append(chunk[len('\n          <!-- '):])
+
+          new_section = '\n          <!-- '.join(new_parts)
+          text = text[:start] + new_section + text[end:]
+          p.write_text(text, encoding='utf-8')
+          print('Classificacao visual concluida. Azuis:', text.count('evidence-card-complete'), 'Vermelhos:', text.count('evidence-card-missing'))
           PY
 
       - name: Validar HTML
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-
           html = Path('index.html').read_text(encoding='utf-8')
-          section_start = html.find('<section id="evidencias"')
-          section_end = html.find('</section>', section_start)
-          section = html[section_start:section_end]
-
-          week_start = section.find('<!-- 7. Semana de Prevenção -->')
-          week_end = section.find('<!-- 8. Missões de Combate -->', week_start)
-          week = section[week_start:week_end]
-
-          assert 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link' in week
-          assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in week
-          assert 'https://drive.google.com/file/d/1p6ku1CchFagdipQXBr-Qx1Fyg2DV2mD0/view?usp=drive_link' in section
-          assert 'https://drive.google.com/file/d/12bf6WFyLYRb1BE5MAHFu4r02PvSHK18Q/view?usp=drive_link' in section
           assert '<html' in html and '</html>' in html
-          print('HTML validado. Semana de Prevenção pronta.')
+          assert html.count('id="evidence-card-missing-styles"') == 1
+          assert html.count('id="evidence-card-complete-styles"') == 1
+          assert 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link' in html
+          assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in html
+          print('HTML validado. Cards azuis:', html.count('evidence-card-complete'), 'Cards vermelhos:', html.count('evidence-card-missing'))
           PY
 
       - name: Commit e sincronizar
@@ -115,7 +140,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: corrigir links da semana de prevencao'
+          git commit -m 'feat: diferenciar cards com evidencias'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
