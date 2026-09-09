@@ -25,6 +25,9 @@ jobs:
           PREVENCAO_PHOTO_URL: 'https://drive.google.com/file/d/1W0bt7zebnpR1nW7-YL-Ac6IcC1B3yjQ7/view?usp=drive_link'
           EFETIVO_PDF_URL: 'https://drive.google.com/file/d/1J00iUEOaGopfzx312FcTXzK8kWHtcrcv/view?usp=drive_link'
           EFETIVO_PHOTO_URL: 'https://drive.google.com/file/d/1MKowxSiwoHRKdGJnX7wabjhLYfa0W4PF/view?usp=drive_link'
+          BRIGADISTAS_PDF_1: 'https://drive.google.com/file/d/1jGIEOeilTNLV-EZdAKYwnkjEwDMSDzeV/view?usp=drive_link'
+          BRIGADISTAS_PDF_2: 'https://drive.google.com/file/d/1uITLqbhnyUfTvhaL-H0yzcvDZ0R9NGpl/view?usp=drive_link'
+          BRIGADISTAS_PHOTO_URL: 'https://drive.google.com/file/d/1xL-5IwBGNr4bHktosY6nRkIKGDqod0FQ/view?usp=drive_link'
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -43,29 +46,112 @@ jobs:
               if end < 0:
                   raise SystemExit(f'Próximo card não encontrado: {title}')
               section = text[start:end]
-
               section, n1 = re.subn(r'data-pdf-src="[^"]*"', 'data-pdf-src="' + pdf_url + '"', section, count=1)
               if n1 != 1:
                   raise SystemExit(f'PDF não encontrado: {title}')
-
               section, n2 = re.subn(r'data-modal-src="[^"]*"(?: data-drive-link="1")?', 'data-modal-src="' + photo_url + '" data-drive-link="1"', section, count=1)
               if n2 != 1:
                   raise SystemExit(f'Foto não encontrada: {title}')
-
               return text[:start] + section + text[end:]
 
           text = update_card(text, 'Contratação BM Temporários', os.environ['BM_PDF_URL'], os.environ['BM_PHOTO_URL'])
           text = update_card(text, 'Contratação de BM Efetivo', os.environ['EFETIVO_PDF_URL'], os.environ['EFETIVO_PHOTO_URL'])
           text = update_card(text, 'Perícia de Incêndios', os.environ['PERICIA_PDF_URL'], os.environ['PERICIA_PHOTO_URL'])
           text = update_card(text, 'Prevenção e Combate', os.environ['PREVENCAO_PDF_URL'], os.environ['PREVENCAO_PHOTO_URL'])
+          text = update_card(text, 'Formação de Brigadistas', os.environ['BRIGADISTAS_PDF_1'], os.environ['BRIGADISTAS_PHOTO_URL'])
+
+          marker = '<h4 class="text-white text-[13px] font-bold leading-snug">Formação de Brigadistas</h4>'
+          start = text.find(marker)
+          end = text.find('\n          <!-- ', start + len(marker))
+          if start < 0 or end < 0:
+              raise SystemExit('Card Formação de Brigadistas não encontrado')
+          section = text[start:end]
+          pdf_list = os.environ['BRIGADISTAS_PDF_1'] + '||' + os.environ['BRIGADISTAS_PDF_2']
+          section, n = re.subn(r'data-pdf-src="[^"]*"', 'data-pdf-src="' + os.environ['BRIGADISTAS_PDF_1'] + '" data-pdf-list="' + pdf_list + '"', section, count=1)
+          if n != 1:
+              raise SystemExit('Não foi possível adicionar a lista de PDFs aos Brigadistas')
+          text = text[:start] + section + text[end:]
+
+          helper = '''
+function openPdfSelection(urls) {
+    const existing = document.getElementById('pdf-selection-overlay');
+    if (existing) existing.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'pdf-selection-overlay';
+    overlay.className = 'fixed inset-0 z-[1000000] flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-4';
+    overlay.innerHTML = `
+      <div class="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-3 mb-5">
+          <div>
+            <h3 class="text-white text-base font-extrabold uppercase tracking-wide">Documentos de Formação</h3>
+            <p class="text-slate-400 text-xs mt-1">Selecione o PDF que deseja abrir.</p>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-white text-xl leading-none" data-close-pdf-selection aria-label="Fechar">&times;</button>
+        </div>
+        <div class="space-y-2">
+          ${urls.map((url, index) => `
+            <button type="button" class="w-full rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-brand-500 hover:border-brand-500 px-4 py-3 text-left text-white font-bold transition flex items-center gap-3" data-pdf-choice="${encodeURIComponent(url)}">
+              <span class="w-9 h-9 rounded-lg bg-slate-700 flex items-center justify-center shrink-0"><i class="fa-regular fa-file-pdf"></i></span>
+              <span>PDF ${index + 1}</span>
+              <i class="fa-solid fa-arrow-up-right-from-square ml-auto text-slate-400"></i>
+            </button>`).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', event => {
+        if (event.target === overlay || event.target.closest('[data-close-pdf-selection]')) {
+            overlay.remove();
+            return;
+        }
+        const choice = event.target.closest('[data-pdf-choice]');
+        if (choice) {
+            const url = decodeURIComponent(choice.dataset.pdfChoice || '');
+            if (url) window.open(url, '_blank', 'noopener,noreferrer');
+            overlay.remove();
+        }
+    });
+}
+'''
+          if 'function openPdfSelection(urls)' not in text:
+              anchor = '/* =========================================================\n   EVENTOS DOM\n   ========================================================= */'
+              if anchor not in text:
+                  raise SystemExit('Âncora de EVENTOS DOM não encontrada')
+              text = text.replace(anchor, '/* =========================================================\n   SELETOR DE MÚLTIPLOS PDFS\n   ========================================================= */\n' + helper + '\n' + anchor, 1)
+
+          old_handler = '''    if (t.matches('.ev-foot')) {
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          new_handler = '''    if (t.matches('.ev-foot')) {
+        const pdfList = t.dataset.pdfList || '';
+        if (pdfList) {
+            const urls = pdfList.split('||').map(url => url.trim()).filter(Boolean);
+            if (urls.length > 1) {
+                openPdfSelection(urls);
+                return;
+            }
+        }
+        const pdfSrc = t.dataset.pdfSrc || '';
+        if (/drive\\.google\\.com/i.test(pdfSrc)) {
+            window.open(pdfSrc, '_blank', 'noopener,noreferrer');
+        } else {
+            openPdfModal(pdfSrc);
+        }
+    }'''
+          if old_handler not in text:
+              raise SystemExit('Handler de PDF não encontrado')
+          text = text.replace(old_handler, new_handler, 1)
           path.write_text(text, encoding='utf-8')
           PY
-
       - name: Commit update
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           git diff --cached --quiet && exit 0
-          git commit -m 'chore: link Contratação de BM Efetivo evidence EVIDENCIA-LINK'
+          git commit -m 'chore: add multi-pdf selector for brigadistas EVIDENCIA-LINK'
           git push
