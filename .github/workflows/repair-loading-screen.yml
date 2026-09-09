@@ -84,6 +84,35 @@ jobs:
           p.write_text(text, encoding='utf-8')
           PY
 
+      - name: Inserir evidencias da Semana de Prevencao
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          pdf_url = 'https://drive.google.com/file/d/16dbbgQ7iFQ3dy3htbYSzfy7g4G3lyczE/view?usp=drive_link'
+          fotos_url = 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link'
+
+          pattern = r'(<!-- 7\. Semana de Prevenção -->.*?)(?=<!-- 8\. Missões de Combate -->)'
+          match = re.search(pattern, text, flags=re.S)
+          if not match:
+              raise SystemExit('Cartao Semana de Prevenção nao encontrado')
+
+          chunk = match.group(1)
+          chunk, pdf_n = re.subn(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf_url}"', chunk, count=1)
+          chunk, foto_n = re.subn(r'data-modal-src="[^"]*"', f'data-modal-src="{fotos_url}"', chunk, count=1)
+
+          if pdf_n != 1 or foto_n != 1:
+              raise SystemExit(f'Links nao atualizados corretamente: pdf={pdf_n}, fotos={foto_n}')
+
+          text = text[:match.start(1)] + chunk + text[match.end(1):]
+          p.write_text(text, encoding='utf-8')
+          print('Links da Semana de Prevenção inseridos com sucesso.')
+          PY
+
       - name: Validar HTML
         run: |
           python - <<'PY'
@@ -92,6 +121,8 @@ jobs:
           assert '<html' in html and '</html>' in html
           assert html.count('id="evidence-card-missing-styles"') == 1
           assert html.count('id="loading-screen-repair"') == 1
+          assert 'https://drive.google.com/file/d/16dbbgQ7iFQ3dy3htbYSzfy7g4G3lyczE/view?usp=drive_link' in html
+          assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in html
           print('HTML validado. Cartoes pendentes:', html.count('evidence-card-missing'))
           PY
 
@@ -101,7 +132,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: destacar caixas sem comprovacao'
+          git commit -m 'fix: inserir evidencias da semana de prevencao'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
