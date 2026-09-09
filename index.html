@@ -321,15 +321,16 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
 }
 </style>
 
+
 <style id="evidence-card-missing-styles">
 #evidencias .evidence-card-missing {
-  background: linear-gradient(145deg, rgba(127,29,29,.48), rgba(220,38,38,.18)) !important;
-  border-color: rgba(248,113,113,.82) !important;
-  box-shadow: inset 0 0 0 1px rgba(248,113,113,.18), 0 8px 22px rgba(127,29,29,.14) !important;
+  background: rgba(220, 38, 38, 0.20) !important;
+  border-color: rgba(248, 113, 113, 0.85) !important;
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18), 0 8px 24px rgba(127, 29, 29, 0.16) !important;
 }
 #evidencias .evidence-card-missing:hover {
-  background: linear-gradient(145deg, rgba(127,29,29,.56), rgba(220,38,38,.24)) !important;
-  border-color: rgba(254,202,202,.95) !important;
+  background: rgba(220, 38, 38, 0.26) !important;
+  border-color: rgba(254, 202, 202, 0.95) !important;
 }
 </style>
 </head>
@@ -1741,33 +1742,45 @@ window.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 
+
 <script id="evidence-card-missing-script">
 (function () {
   function hasEvidence(el) {
     if (!el) return false;
     if (el.classList.contains('ev-foot')) {
-      return Boolean(((el.getAttribute('href') || '') || (el.getAttribute('data-pdf-src') || '')).trim());
+      var href = (el.getAttribute('href') || '').trim();
+      var pdf = (el.getAttribute('data-pdf-src') || '').trim();
+      return Boolean(href || pdf);
     }
     if (el.classList.contains('ev-thumb')) {
-      const src = (el.getAttribute('data-modal-src') || '').trim();
+      var src = (el.getAttribute('data-modal-src') || '').trim();
       return Boolean(src) && !/placehold\.co/i.test(src) && !/Aguardando\+Fotos/i.test(src);
     }
-    return true;
+    return false;
   }
-  function updateEvidenceCards() {
-    const area = document.getElementById('evidencias');
+
+  function applyEvidenceStatus() {
+    var area = document.getElementById('evidencias');
     if (!area) return;
-    area.querySelectorAll('.bg-slate-800\/80').forEach(function (card) {
-      const controls = Array.from(card.querySelectorAll('.ev-foot, .ev-thumb'));
+    var grid = Array.from(area.querySelectorAll('.grid')).find(function (g) {
+      return g.querySelector('.ev-foot, .ev-thumb');
+    });
+    if (!grid) return;
+
+    grid.querySelectorAll(':scope > div').forEach(function (card) {
+      var controls = Array.from(card.querySelectorAll('.ev-foot, .ev-thumb'));
       if (!controls.length) return;
       card.classList.toggle('evidence-card-missing', !controls.every(hasEvidence));
     });
   }
+
   function start() {
-    updateEvidenceCards();
-    setTimeout(updateEvidenceCards, 1000);
-    setTimeout(updateEvidenceCards, 2500);
+    applyEvidenceStatus();
+    setTimeout(applyEvidenceStatus, 500);
+    setTimeout(applyEvidenceStatus, 1500);
+    setTimeout(applyEvidenceStatus, 3000);
   }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', start, { once: true });
   } else {
