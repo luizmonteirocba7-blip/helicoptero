@@ -35,7 +35,7 @@ jobs:
           if 'id="loading-screen-repair"' not in text:
               text = text.replace('</head>', css_loading + '</head>', 1)
 
-          # Remove rotinas anteriores de destaque para deixar uma unica regra estatica.
+          # Remove rotinas anteriores de destaque e instala somente a regra estatica.
           text = re.sub(r'\n<style id="evidence-card-(?:status|missing)-styles">.*?</style>\n', '\n', text, flags=re.S)
           text = re.sub(r'\n<script id="evidence-card-(?:status|missing)-script">.*?</script>\n', '\n', text, flags=re.S)
 
@@ -43,50 +43,44 @@ jobs:
           if 'id="evidence-card-missing-styles"' not in text:
               text = text.replace('</head>', css_evidence + '</head>', 1)
 
-          # Aplique classes diretamente no HTML, evitando depender de JavaScript em tempo de execucao.
+          # Marcação estática dos cartões: se qualquer evidência exigida estiver vazia,
+          # a caixa inteira recebe evidence-card-missing. Os botões permanecem normais.
           start = text.find('<section id="evidencias"')
           end = text.find('</section>', start)
           if start == -1 or end == -1:
               raise SystemExit('Secao de evidencias nao encontrada')
           section = text[start:end]
 
-          chunks = section.split('\n          <!-- ')
-          for i in range(1, len(chunks)):
-              chunk = '\n          <!-- ' + chunks[i]
+          parts = section.split('\n          <!-- ')
+          new_parts = [parts[0]]
+          for raw in parts[1:]:
+              chunk = '\n          <!-- ' + raw
               open_pos = chunk.find('<div class="bg-slate-800/80')
-              if open_pos == -1:
-                  continue
-              open_end = chunk.find('>', open_pos)
-              if open_end == -1:
-                  continue
-              open_tag = chunk[open_pos:open_end + 1]
+              if open_pos != -1:
+                  open_end = chunk.find('>', open_pos)
+                  open_tag = chunk[open_pos:open_end + 1] if open_end != -1 else ''
+                  controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
+                  if open_tag and controls:
+                      complete = True
+                      for control in controls:
+                          if re.search(r'\bev-foot\b', control):
+                              href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
+                              pdf = re.search(r'\bdata-pdf-src="([^"]*)"', control, flags=re.I)
+                              valid = bool((href and href.group(1).strip()) or (pdf and pdf.group(1).strip()))
+                          else:
+                              modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
+                              src = modal.group(1).strip() if modal else ''
+                              valid = bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I)
+                          complete = complete and valid
 
-              controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
-              if not controls:
-                  continue
+                      clean_tag = re.sub(r'\sevidence-card-missing\b', '', open_tag)
+                      if not complete:
+                          clean_tag = clean_tag.replace('class="bg-slate-800/80', 'class="evidence-card-missing bg-slate-800/80', 1)
+                      chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, clean_tag, 1)
+              new_parts.append(chunk[len('\n          <!-- '):])
 
-              complete = True
-              for control in controls:
-                  if re.search(r'\bev-foot\b', control):
-                      href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
-                      pdf = re.search(r'\bdata-pdf-src="([^"]*)"', control, flags=re.I)
-                      valid = bool((href and href.group(1).strip()) or (pdf and pdf.group(1).strip()))
-                  else:
-                      modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
-                      src = modal.group(1).strip() if modal else ''
-                      valid = bool(src) and not re.search(r'placehold\\.co|Aguardando\\+Fotos', src, flags=re.I)
-                  complete = complete and valid
-
-              new_tag = open_tag
-              if 'evidence-card-missing' in open_tag:
-                  new_tag = re.sub(r'\s+evidence-card-missing\b', '', open_tag)
-              if not complete:
-                  new_tag = new_tag.replace('class="bg-slate-800/80', 'class="evidence-card-missing bg-slate-800/80', 1)
-
-              chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, new_tag, 1)
-              chunks[i] = chunk[len('\n          <!-- '):]
-
-          text = '\n          <!-- '.join(chunks)
+          new_section = '\n          <!-- '.join(new_parts)
+          text = text[:start] + new_section + text[end:]
           p.write_text(text, encoding='utf-8')
           PY
 
@@ -98,8 +92,7 @@ jobs:
           assert '<html' in html and '</html>' in html
           assert html.count('id="evidence-card-missing-styles"') == 1
           assert html.count('id="loading-screen-repair"') == 1
-          missing = html.count('evidence-card-missing')
-          print(f'HTML validado. Cartoes pendentes: {missing}')
+          print('HTML validado. Cartoes pendentes:', html.count('evidence-card-missing'))
           PY
 
       - name: Commit e sincronizar
