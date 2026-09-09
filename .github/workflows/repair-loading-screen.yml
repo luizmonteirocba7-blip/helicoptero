@@ -17,74 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Aplicar cor das caixas de evidencias
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('index.html')
-          text = p.read_text(encoding='utf-8')
-
-          # Mantem a tela de carregamento imediatamente oculta.
-          marker = '<div id="loading-screen"'
-          if marker in text and 'style="display:none!important"' not in text[text.find(marker):text.find(marker)+300]:
-              text = text.replace(marker, '<div id="loading-screen" style="display:none!important"', 1)
-
-          css_loading = '''\n<style id="loading-screen-repair">\n#loading-screen {\n  display: none !important;\n  pointer-events: none !important;\n}\n#loading-screen.loading-screen-ready {\n  display: none !important;\n  opacity: 0 !important;\n  visibility: hidden !important;\n}\n</style>\n'''
-          if 'id="loading-screen-repair"' not in text:
-              text = text.replace('</head>', css_loading + '</head>', 1)
-
-          # Remove rotinas anteriores de destaque e instala somente a regra estatica.
-          text = re.sub(r'\n<style id="evidence-card-(?:status|missing)-styles">.*?</style>\n', '\n', text, flags=re.S)
-          text = re.sub(r'\n<script id="evidence-card-(?:status|missing)-script">.*?</script>\n', '\n', text, flags=re.S)
-
-          css_evidence = '''\n<style id="evidence-card-missing-styles">\n#evidencias .evidence-card-missing {\n  background: rgba(220, 38, 38, 0.20) !important;\n  border-color: rgba(248, 113, 113, 0.85) !important;\n  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, 0.18), 0 8px 24px rgba(127, 29, 29, 0.16) !important;\n}\n#evidencias .evidence-card-missing:hover {\n  background: rgba(220, 38, 38, 0.26) !important;\n  border-color: rgba(254, 202, 202, 0.95) !important;\n}\n</style>\n'''
-          if 'id="evidence-card-missing-styles"' not in text:
-              text = text.replace('</head>', css_evidence + '</head>', 1)
-
-          # Marcação estática dos cartões: se qualquer evidência exigida estiver vazia,
-          # a caixa inteira recebe evidence-card-missing. Os botões permanecem normais.
-          start = text.find('<section id="evidencias"')
-          end = text.find('</section>', start)
-          if start == -1 or end == -1:
-              raise SystemExit('Secao de evidencias nao encontrada')
-          section = text[start:end]
-
-          parts = section.split('\n          <!-- ')
-          new_parts = [parts[0]]
-          for raw in parts[1:]:
-              chunk = '\n          <!-- ' + raw
-              open_pos = chunk.find('<div class="bg-slate-800/80')
-              if open_pos != -1:
-                  open_end = chunk.find('>', open_pos)
-                  open_tag = chunk[open_pos:open_end + 1] if open_end != -1 else ''
-                  controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
-                  if open_tag and controls:
-                      complete = True
-                      for control in controls:
-                          if re.search(r'\bev-foot\b', control):
-                              href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
-                              pdf = re.search(r'\bdata-pdf-src="([^"]*)"', control, flags=re.I)
-                              valid = bool((href and href.group(1).strip()) or (pdf and pdf.group(1).strip()))
-                          else:
-                              modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
-                              src = modal.group(1).strip() if modal else ''
-                              valid = bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I)
-                          complete = complete and valid
-
-                      clean_tag = re.sub(r'\sevidence-card-missing\b', '', open_tag)
-                      if not complete:
-                          clean_tag = clean_tag.replace('class="bg-slate-800/80', 'class="evidence-card-missing bg-slate-800/80', 1)
-                      chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, clean_tag, 1)
-              new_parts.append(chunk[len('\n          <!-- '):])
-
-          new_section = '\n          <!-- '.join(new_parts)
-          text = text[:start] + new_section + text[end:]
-          p.write_text(text, encoding='utf-8')
-          PY
-
-      - name: Inserir evidencias da Semana de Prevencao
+      - name: Atualizar Semana de Prevencao
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -96,29 +29,26 @@ jobs:
           pdf_url = 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link'
           fotos_url = 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link'
 
-          pattern = r'(<!-- 7\. Semana de Prevenção -->.*?)(?=<!-- 8\. Missões de Combate -->)'
-          match = re.search(pattern, text, flags=re.S)
-          if not match:
+          start = text.find('<!-- 7. Semana de Prevenção -->')
+          end = text.find('<!-- 8. Missões de Combate -->', start)
+          if start == -1 or end == -1:
               raise SystemExit('Cartao Semana de Prevenção nao encontrado')
 
-          chunk = match.group(1)
-          chunk, pdf_n = re.subn(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf_url}"', chunk, count=1)
-          chunk, foto_n = re.subn(r'data-modal-src="[^"]*"', f'data-modal-src="{fotos_url}"', chunk, count=1)
+          chunk = text[start:end]
 
-          if pdf_n != 1 or foto_n != 1:
-              raise SystemExit(f'Links nao atualizados corretamente: pdf={pdf_n}, fotos={foto_n}')
+          # Troca somente os dois campos deste cartão.
+          pdf_match = re.search(r'data-pdf-src="([^"]*)"', chunk)
+          foto_match = re.search(r'data-modal-src="([^"]*)"', chunk)
+          if not pdf_match or not foto_match:
+              raise SystemExit('Campos PDF/Fotos nao encontrados no cartao')
 
-          # O link de fotos do Drive deve abrir diretamente em nova aba.
-          chunk = re.sub(
-              r'(data-modal-src="' + re.escape(fotos_url) + r'")',
-              r'\1 data-drive-link="1"',
-              chunk,
-              count=1,
-          )
+          chunk = chunk[:pdf_match.start()] + f'data-pdf-src="{pdf_url}"' + chunk[pdf_match.end():]
+          foto_match = re.search(r'data-modal-src="([^"]*)"', chunk)
+          chunk = chunk[:foto_match.start()] + f'data-modal-src="{fotos_url}" data-drive-link="1"' + chunk[foto_match.end():]
 
-          text = text[:match.start(1)] + chunk + text[match.end(1):]
+          text = text[:start] + chunk + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('Links atuais da Semana de Prevenção inseridos com sucesso.')
+          print('Semana de Prevenção atualizada.')
           PY
 
       - name: Validar HTML
@@ -127,11 +57,9 @@ jobs:
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
           assert '<html' in html and '</html>' in html
-          assert html.count('id="evidence-card-missing-styles"') == 1
-          assert html.count('id="loading-screen-repair"') == 1
           assert 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link' in html
           assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in html
-          print('HTML validado. Cartoes pendentes:', html.count('evidence-card-missing'))
+          print('HTML validado.')
           PY
 
       - name: Commit e sincronizar
@@ -140,7 +68,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: atualizar evidencias da semana de prevencao'
+          git commit -m 'fix: atualizar links da semana de prevencao'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
