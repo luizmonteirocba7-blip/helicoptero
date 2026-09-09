@@ -60,6 +60,14 @@ jobs:
               chunk = chunk[:tag_end] + ' data-drive-link="1"' + chunk[tag_end:]
           section = section[:start] + chunk + section[end:]
 
+          # Configura Publicações Matérias: somente o PDF é obrigatório.
+          start, end = card_chunk('<!-- 13. Publicações Matérias -->')
+          chunk = section[start:end]
+          pdf_url = 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link'
+          chunk = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf_url}"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src=""', chunk, count=1)
+          section = section[:start] + chunk + section[end:]
+
           text = text[:section_start] + section + text[section_end:]
           p.write_text(text, encoding='utf-8')
           print('Links das evidencias configurados.')
@@ -95,6 +103,7 @@ jobs:
                   if open_tag and 'bg-slate-800/80' in open_tag and re.search(r'\bev-(?:foot|thumb)\b', chunk):
                       controls = re.findall(r'<(?:button|a)[^>]*class="[^"]*\bev-(?:foot|thumb)\b[^"]*"[^>]*>', chunk, flags=re.I)
                       complete = bool(controls)
+                      is_publicacoes = chunk.startswith('\n          <!-- 13. Publicações Matérias -->')
                       for control in controls:
                           if re.search(r'\bev-foot\b', control):
                               href = re.search(r'\bhref="([^"]*)"', control, flags=re.I)
@@ -103,7 +112,7 @@ jobs:
                           else:
                               modal = re.search(r'\bdata-modal-src="([^"]*)"', control, flags=re.I)
                               src = modal.group(1).strip() if modal else ''
-                              valid = bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I)
+                              valid = True if is_publicacoes else (bool(src) and not re.search(r'placehold\.co|Aguardando\+Fotos', src, flags=re.I))
                           complete = complete and valid
 
                       clean_tag = re.sub(r'\sevidence-card-missing\b', '', open_tag)
@@ -118,7 +127,7 @@ jobs:
           new_section = '\n          <!-- '.join(new_parts)
           text = text[:start] + new_section + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('Classificacao visual concluida. Azuis:', text.count('evidence-card-complete'), 'Vermelhos:', text.count('evidence-card-missing'))
+          print('Classificacao visual concluida. Publicações usam somente o PDF; Azuis:', text.count('evidence-card-complete'), 'Vermelhos:', text.count('evidence-card-missing'))
           PY
 
       - name: Validar HTML
@@ -131,7 +140,14 @@ jobs:
           assert html.count('id="evidence-card-complete-styles"') == 1
           assert 'https://drive.google.com/file/d/1GSiSlVIVDqyONO7nR9Y-PExRqwpzvOT5/view?usp=drive_link' in html
           assert 'https://drive.google.com/file/d/1-7zqThIWPzd9V4ynh-Ty9xCW02cGTrrW/view?usp=drive_link' in html
-          print('HTML validado. Cards azuis:', html.count('evidence-card-complete'), 'Cards vermelhos:', html.count('evidence-card-missing'))
+          assert 'https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link' in html
+          start = html.find('<!-- 13. Publicações Matérias -->')
+          end = html.find('<!-- 14. Focos de Calor -->', start)
+          pub = html[start:end]
+          assert 'data-pdf-src="https://drive.google.com/file/d/1sKtpNq6NBy21ca0rmVOopu_ckzx1w2RR/view?usp=drive_link"' in pub
+          assert 'data-modal-src=""' in pub
+          assert 'evidence-card-complete' in pub
+          print('HTML validado. Publicações Matérias prontas com PDF e sem fotos.')
           PY
 
       - name: Commit e sincronizar
@@ -140,7 +156,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'feat: diferenciar cards com evidencias'
+          git commit -m 'fix: configurar evidencia de publicacoes'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
