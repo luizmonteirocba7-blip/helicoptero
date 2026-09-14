@@ -1,0 +1,77 @@
+name: Fix contratação efetivo dinâmica
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tornar contratação de BM Efetivo dinâmica
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          start = text.find('<!-- Contratação Efetivo (estático = 66) -->')
+          end = text.find('<!-- Tempo Restante -->', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Bloco de contratação efetivo não encontrado.')
+
+          chunk = text[start:end]
+          chunk = chunk.replace('<!-- Contratação Efetivo (estático = 66) -->', '<!-- Contratação Efetivo (dinâmico pelo Google Sheets) -->', 1)
+          chunk = re.sub(r'(<div class="kpi-card kpi-static kpi-feature kpi-feature-green")', r'\1 data-metric="Contratação de BM Efetivo"', chunk, count=1)
+          chunk = re.sub(r'(<div class="kpi-value)[^"]*">66</div>', r'\1 qtd-value">0</div>', chunk, count=1)
+          chunk = re.sub(r'(<div class="kpi-bar"><div class="kpi-bar-fill)[^>]*></div>', r'\1></div>', chunk, count=1)
+
+          text = text[:start] + chunk + text[end:]
+
+          assert 'data-metric="Contratação de BM Efetivo"' in chunk
+          assert 'class="kpi-value qtd-value">0</div>' in chunk
+          assert 'kpi-bar-fill is-full' not in chunk
+
+          p.write_text(text, encoding='utf-8')
+          print('Contratação de BM Efetivo agora usa os dados do Google Sheets.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          s = html.find('<!-- Contratação Efetivo (dinâmico pelo Google Sheets) -->')
+          e = html.find('<!-- Tempo Restante -->', s)
+          card = html[s:e]
+          assert 'data-metric="Contratação de BM Efetivo"' in card
+          assert 'class="kpi-value qtd-value">0</div>' in card
+          assert 'kpi-bar-fill is-full' not in card
+          print('Validação OK: card efetivo vinculado à rotina dinâmica.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix: tornar contratacao efetivo dinamica'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
