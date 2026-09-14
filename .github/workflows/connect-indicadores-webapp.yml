@@ -1,0 +1,104 @@
+name: Connect indicadores Web App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: connect-indicadores-webapp
+  cancel-in-progress: false
+
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Conectar Visão Geral Operacional ao Web App
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          # Endpoint oficial do Apps Script criado para a aba ativa de indicadores.
+          marker = "const GOOGLE_SHEETS_BASE_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/gviz/tq`;"
+          webapp = 'https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec'
+          if marker not in text:
+              raise SystemExit('Marker da configuração Google Sheets não encontrado')
+          if 'const INDICADORES_WEB_APP_URL =' not in text:
+              text = text.replace(marker, marker + f'\nconst INDICADORES_WEB_APP_URL = "{webapp}";', 1)
+          else:
+              text = re.sub(r'const INDICADORES_WEB_APP_URL = "[^"]*";', f'const INDICADORES_WEB_APP_URL = "{webapp}";', text, count=1)
+
+          # A nova API devolve ObjetivoAlcancado; mantemos Quantidade como compatibilidade.
+          text = text.replace(
+              'const qtdNum = Number(item.Quantidade) || 0;',
+              'const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;',
+              1,
+          )
+
+          # Normaliza os nomes da planilha para os data-metric usados no painel.
+          old = 'const indicadorNome = String(item[\'Indicador\'] || item[\'Indicador \'] || "Desconhecido");\n            const metaNum = Number(item.Meta) || 0;\n            const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;\n            return { indicador: indicadorNome, meta: metaNum, qtd: qtdNum, percent: metaNum > 0 ? (qtdNum / metaNum) * 100 : (qtdNum > 0 ? 100 : 0) };'
+          new = 'const indicadorOriginal = String(item[\'Indicador\'] || item[\'Indicador \'] || "Desconhecido").trim();\n            const aliases = {\n                "Drone (RPAS)": "Aeronave Remotamente Pilotada",\n                "Formação de Brigadistas": "Capacitação de Brigadistas",\n                "Publicações Matérias": "Publicações",\n                "OP Órgãos Federais": "Op órgãos federais",\n                "OP Combate (Parceria)": "Op de Combate"\n            };\n            const indicadorNome = aliases[indicadorOriginal] || indicadorOriginal;\n            const metaNum = Number(item.Meta) || 0;\n            const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;\n            return { indicador: indicadorNome, meta: metaNum, qtd: qtdNum, percent: metaNum > 0 ? (qtdNum / metaNum) * 100 : (qtdNum > 0 ? 100 : 0) };'
+          if old not in text:
+              raise SystemExit('Bloco de mapeamento dos indicadores não encontrado')
+          text = text.replace(old, new, 1)
+
+          # Substitui o carregamento da aba indicadores pelo Web App, mantendo as outras abas pelo Sheets.
+          start = text.find('async function carregarDadosPlanilha()')
+          end = text.find('\n}\n\nasync function carregarPainelAPI', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Função carregarDadosPlanilha não encontrada')
+          replacement = '''async function carregarIndicadoresWebApp() {\n    const response = await fetch(`${INDICADORES_WEB_APP_URL}?t=${Date.now()}`, {\n        method: 'GET',\n        cache: 'no-store',\n        headers: { 'Accept': 'application/json' }\n    });\n    if (!response.ok) throw new Error(`Web App indicadores HTTP ${response.status}`);\n    const payload = await response.json();\n    if (!Array.isArray(payload)) throw new Error('Web App indicadores não retornou uma lista JSON.');\n    return payload;\n}\n\nasync function carregarDadosPlanilha() {\n    try {\n        const [indicadores, helicoptero, combustivel, seguro, prazo] = await Promise.all([\n            carregarIndicadoresWebApp(), carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)\n        ]);\n        return { indicadores, helicoptero, combustivel, seguro, prazo };\n    } catch (error) {\n        console.warn('Web App/Planilha falhou; usando fallback existente.', error);\n        return fetch(FALLBACK_WEB_APP_URL, { cache: 'no-store' }).then(res => {\n            if (!res.ok) throw new Error(`Fallback HTTP ${res.status}`);\n            return res.json();\n        });\n    }\n}'''
+          text = text[:start] + replacement + text[end + 2:]
+
+          p.write_text(text, encoding='utf-8')
+          print('Conexão do Web App aplicada ao carregamento dos indicadores.')
+          PY
+
+      - name: Validar integração
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          checks = [
+              'const INDICADORES_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec";',
+              'async function carregarIndicadoresWebApp()',
+              'item.ObjetivoAlcancado ?? item.Quantidade',
+              '"Drone (RPAS)": "Aeronave Remotamente Pilotada"',
+              '"Formação de Brigadistas": "Capacitação de Brigadistas"',
+              '"Publicações Matérias": "Publicações"',
+              '"OP Órgãos Federais": "Op órgãos federais"',
+              '"OP Combate (Parceria)": "Op de Combate"',
+          ]
+          for check in checks:
+              assert check in html, check
+          assert html.count('async function carregarIndicadoresWebApp()') == 1
+          assert html.count('async function carregarDadosPlanilha()') == 1
+          print('Integração validada.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat: conectar indicadores ao web app da planilha'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 3
+          done
+          exit 1
