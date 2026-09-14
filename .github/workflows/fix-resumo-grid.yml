@@ -1,0 +1,138 @@
+name: Fix grade do resumo do contrato
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restaurar estrutura visual do resumo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          # Corrige qualquer atributo HTML quebrado da barra do card.
+          text = text.replace(
+              '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>',
+              '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>'
+          )
+
+          # A última alteração tornou os cartões de prazo/contrato filhos do
+          # card verde em alguns estados. Reescrevemos somente a seção de
+          # resumo para garantir os 4 cartões independentes, preservando os
+          # dados dinâmicos dos dois indicadores.
+          resumo = r'''<section id="visao-geral" class="reveal reveal-delay-1 flex flex-col gap-2">
+      <div class="sec-label">Resumo do Contrato <span class="line"></span></div>
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+
+        <!-- Contratação Temporários -->
+        <button class="kpi-card kpi-feature" data-metric="Contratação BM Temporários" data-action="filter-metric"
+                style="background:linear-gradient(145deg,#5f0b17 0%,#96000a 60%,#b7192a 100%);color:#fff;border-color:transparent;">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="fa-solid fa-user-plus"></i></div>
+            <span class="kpi-pct">—</span>
+          </div>
+          <div class="kpi-label">Contratação BM Temporários</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">100</span></div>
+        </button>
+
+        <!-- Contratação Efetivo (dinâmico pelo Google Sheets) -->
+        <div class="kpi-card kpi-static kpi-feature kpi-feature-green" data-metric="Contratação de BM Efetivo"
+             style="background:linear-gradient(145deg,#064e3b 0%,#047857 60%,#059669 100%);color:#fff;border-color:transparent;">
+          <div class="kpi-top">
+            <div class="kpi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <span class="kpi-pct"><i class="fa-solid fa-circle-check"></i> Efetivo</span>
+          </div>
+          <div class="kpi-label">Contratação de BM Efetivo</div>
+          <div class="kpi-value qtd-value">…</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Militares efetivos contratados</div>
+        </div>
+
+        <!-- Tempo Restante -->
+        <div class="info-card">
+          <div class="info-head"><i class="fa-solid fa-hourglass-half text-brand-600"></i> Tempo Restante</div>
+          <div class="flex items-center gap-3 mt-3">
+            <span class="info-icon"><i class="fa-solid fa-calendar-day"></i></span>
+            <div>
+              <span id="texto-prazo-meses" class="info-big text-slate-900">0</span>
+              <span class="info-unit">Meses</span>
+            </div>
+          </div>
+          <div class="info-foot">Prazo final · <strong id="texto-data-final">--/--/----</strong></div>
+        </div>
+
+        <!-- Valor do Contrato -->
+        <div class="info-card">
+          <div class="info-head"><i class="fa-solid fa-coins text-brand-600"></i> Valor do Contrato</div>
+          <div class="gauge-wrap">
+            <canvas id="gaugeValor"></canvas>
+            <div class="gauge-center">45%</div>
+          </div>
+          <div class="gauge-scale"><span>0%</span><span>EXECUÇÃO</span><span>100%</span></div>
+          <div class="info-foot">Total · <strong>R$ 45.000.000,00</strong></div>
+        </div>
+
+      </div>
+    </section>
+'''
+
+          pattern = r'<section id="visao-geral".*?(?=<section id="indicadores")'
+          text, n = re.subn(pattern, resumo, text, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Seção visao-geral não encontrada para restauração.')
+
+          p.write_text(text, encoding='utf-8')
+          print('Grade do resumo restaurada com 4 cartões independentes.')
+          PY
+
+      - name: Validar estrutura
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          inicio = html.index('<section id="visao-geral"')
+          fim = html.index('<section id="indicadores"', inicio)
+          bloco = html[inicio:fim]
+          assert bloco.count('class="info-card"') == 2
+          assert bloco.count('data-metric="Contratação BM Temporários"') == 1
+          assert bloco.count('data-metric="Contratação de BM Efetivo"') == 1
+          assert '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>' in bloco
+          assert '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>' not in bloco
+          print('Estrutura do resumo validada.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: restaurar grade do resumo do contrato'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
