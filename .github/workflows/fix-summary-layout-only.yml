@@ -1,0 +1,106 @@
+name: Padronizar layout dos cards do resumo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ajustar somente o layout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          marker = '<style id="summary-contract-layout-fix">'
+          css = '''<style id="summary-contract-layout-fix">
+          #visao-geral > .grid {
+            align-items: stretch !important;
+          }
+          @media (min-width: 1280px) {
+            #visao-geral > .grid {
+              grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+              gap: 12px !important;
+            }
+          }
+          #visao-geral > .grid > .kpi-card,
+          #visao-geral > .grid > .info-card {
+            min-width: 0 !important;
+            width: 100% !important;
+            height: 258px !important;
+            min-height: 258px !important;
+          }
+          #visao-geral > .grid > .kpi-feature {
+            height: 258px !important;
+            min-height: 258px !important;
+          }
+          @media (max-width: 1279px) {
+            #visao-geral > .grid > .kpi-card,
+            #visao-geral > .grid > .info-card {
+              height: auto !important;
+              min-height: 240px !important;
+            }
+          }
+          </style>'''
+
+          if marker not in text:
+              text = text.replace('</head>', css + '\n</head>', 1)
+          else:
+              text = re.sub(r'<style id="summary-contract-layout-fix">.*?</style>', css, text, count=1, flags=re.S)
+
+          # Do not alter any data-loading JavaScript or spreadsheet bindings.
+          assert 'INDICADORES_WEB_APP_URL' in text
+          assert 'data-metric="Contratação de BM Efetivo"' in text
+          assert 'id="texto-prazo-meses"' in text
+          assert 'id="gaugeValor"' in text
+          assert marker in text
+
+          p.write_text(text, encoding='utf-8')
+          print('Somente o layout do resumo foi ajustado; dados não foram alterados.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert '<style id="summary-contract-layout-fix">' in html
+          assert 'grid-template-columns: repeat(4, minmax(0, 1fr)) !important;' in html
+          assert 'INDICADORES_WEB_APP_URL' in html
+          assert 'data-metric="Contratação de BM Efetivo"' in html
+          assert 'id="texto-prazo-meses"' in html
+          assert 'id="gaugeValor"' in html
+          print('Layout validado; integração com Google Sheets preservada.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'feat: padronizar layout dos cards do resumo'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
