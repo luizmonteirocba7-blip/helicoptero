@@ -3,13 +3,15 @@ name: Fix indicadores Web App
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/workflows/fix-indicadores-webapp.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  fix:
+  sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Corrigir fonte dos indicadores
+      - name: Sincronizar painel com Google Sheets
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -25,20 +27,13 @@ jobs:
 
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
-
           webapp = 'https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec'
-          marker = '<!-- INDICADORES GOOGLE SHEETS: sincronizacao 2026-09-14 -->'
-          if marker not in text:
-              text = text.replace('<head>', '<head>\n' + marker, 1)
 
+          # Fonte oficial dos indicadores
           text = re.sub(r'const INDICADORES_WEB_APP_URL\s*=\s*"[^"]*";', f'const INDICADORES_WEB_APP_URL = "{webapp}";', text, count=1)
 
-          text = text.replace(
-              "const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;",
-              "const qtdNum = Number(item.ObjetivoAlcancado ?? item['Objetivo Alcançado'] ?? item['ObjetivoAlcancado '] ?? item.Quantidade) || 0;",
-          )
-
-          new_loader = r'''async function carregarIndicadoresWebApp() {
+          # Leitura do JSON do Apps Script
+          loader = r'''async function carregarIndicadoresWebApp() {
     const response = await fetch(`${INDICADORES_WEB_APP_URL}?t=${Date.now()}`, {
         method: 'GET',
         cache: 'no-store',
@@ -47,50 +42,59 @@ jobs:
     });
     if (!response.ok) throw new Error(`Web App indicadores HTTP ${response.status}`);
     const payload = await response.json();
-    if (!Array.isArray(payload)) throw new Error('Web App indicadores retornou formato inesperado.');
-    console.info('[Painel] Indicadores carregados pelo Web App.', payload.length);
+    if (!Array.isArray(payload)) throw new Error('Web App indicadores não retornou uma lista JSON.');
+    console.info('[Painel] Indicadores carregados pelo Web App:', payload.length);
     return payload;
 }
 
 async function carregarIndicadoresDiretoDaPlanilha() {
     const dadosDiretos = await carregarAba('Página1');
-    console.warn('[Painel] Fallback direto para a mesma base Google Sheets/Página1.', dadosDiretos.length);
+    console.warn('[Painel] Fallback para Página1:', dadosDiretos.length);
     return dadosDiretos;
 }'''
 
-          text, n = re.subn(
-              r'async function carregarIndicadoresWebApp\(\)\s*\{.*?\n\}\n\n(?=async function carregarDadosPlanilha)',
-              new_loader + '\n\n', text, count=1, flags=re.S)
+          text, n = re.subn(r'async function carregarIndicadoresWebApp\(\)\s*\{.*?\n\}\s*\n\s*(?=async function carregarDadosPlanilha)', loader + '\n\n', text, count=1, flags=re.S)
           if n != 1:
-              raise SystemExit('Função carregarIndicadoresWebApp não encontrada.')
+              raise SystemExit('carregarIndicadoresWebApp não encontrado')
 
-          new_planilha = r'''async function carregarDadosPlanilha() {
+          planilha_loader = r'''async function carregarDadosPlanilha() {
     const [indicadores, helicoptero, combustivel, seguro, prazo] = await Promise.all([
         carregarIndicadoresWebApp().catch(() => carregarIndicadoresDiretoDaPlanilha()),
-        carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)
+        carregarAba(SHEET_NAMES.helicoptero),
+        carregarAba(SHEET_NAMES.combustivel),
+        carregarAba(SHEET_NAMES.seguro),
+        carregarAba(SHEET_NAMES.prazo)
     ]);
     return { indicadores, helicoptero, combustivel, seguro, prazo };
 }'''
 
-          text, n = re.subn(
-              r'async function carregarDadosPlanilha\(\)\s*\{.*?\n\}\n\n(?=async function carregarPainelAPI)',
-              new_planilha + '\n\n', text, count=1, flags=re.S)
+          text, n = re.subn(r'async function carregarDadosPlanilha\(\)\s*\{.*?\n\}\s*\n\s*(?=async function carregarPainelAPI)', planilha_loader + '\n\n', text, count=1, flags=re.S)
           if n != 1:
-              raise SystemExit('Função carregarDadosPlanilha não encontrada.')
+              raise SystemExit('carregarDadosPlanilha não encontrado')
 
-          text, n = re.subn(
-              r'const novosIndicadores\s*=\s*\[.*?\n\s*\];\n\n\s*novosIndicadores\.forEach\(novo\s*=>\s*\{.*?\n\s*\}\);',
-              'const novosIndicadores = [];', text, count=1, flags=re.S)
+          # Coluna B do Apps Script = Objetivo Alcançado
+          text = re.sub(r'const qtdNum = Number\(item\.ObjetivoAlcancado \?\? item\.Quantidade\) \|\| 0;', "const qtdNum = Number(item.ObjetivoAlcancado ?? item['Objetivo Alcançado'] ?? item['ObjetivoAlcancado '] ?? item.Quantidade) || 0;", text, count=1)
+
+          # Elimina a lista antiga de números fixos
+          text, n = re.subn(r'const novosIndicadores\s*=\s*\[.*?\n\s*\];\s*\n\s*novosIndicadores\.forEach\(novo\s*=>\s*\{.*?\n\s*\}\);', 'const novosIndicadores = [];', text, count=1, flags=re.S)
           if n != 1:
-              raise SystemExit('Bloco novosIndicadores não encontrado.')
+              raise SystemExit('novosIndicadores não encontrado')
+
+          # Contratação BM Efetivo passa a usar a mesma base
+          text = re.sub(r'<div class="kpi-value">66</div>', '<div class="kpi-value qtd-value">0</div>', text, count=1)
+          text = re.sub(r'(<div class="kpi-card kpi-feature kpi-feature-green"[^>]*)(>)', r'\1 data-metric="Contratação de BM Efetivo"\2', text, count=1)
+
+          marker = '<!-- GOOGLE-SHEETS-INDICADORES-SYNC -->'
+          if marker not in text:
+              text = text.replace('<head>', '<head>\n' + marker, 1)
 
           assert webapp in text
-          assert "item['Objetivo Alcançado']" in text
-          assert 'carregarIndicadoresDiretoDaPlanilha' in text
           assert 'const novosIndicadores = [];' in text
+          assert "item['Objetivo Alcançado']" in text
+          assert 'data-metric="Contratação de BM Efetivo"' in text
 
           p.write_text(text, encoding='utf-8')
-          print('Sincronização Google Sheets aplicada.')
+          print('Integração com Google Sheets aplicada.')
           PY
 
       - name: Validar
@@ -98,25 +102,22 @@ async function carregarIndicadoresDiretoDaPlanilha() {
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
-          assert '<!-- INDICADORES GOOGLE SHEETS: sincronizacao 2026-09-14 -->' in html
+          assert '<!-- GOOGLE-SHEETS-INDICADORES-SYNC -->' in html
           assert 'INDICADORES_WEB_APP_URL' in html
           assert 'carregarIndicadoresWebApp' in html
-          assert 'carregarIndicadoresDiretoDaPlanilha' in html
           assert 'const novosIndicadores = [];' in html
-          print('Validação da integração OK.')
+          assert 'data-metric="Contratação de BM Efetivo"' in html
+          print('Validação OK.')
           PY
 
-      - name: Commit e sincronizar
+      - name: Commit
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'fix: sincronizar indicadores com Google Sheets'
-          for i in 1 2 3; do
-            git fetch origin main
-            git rebase origin/main && git push origin HEAD:main && exit 0
-            git rebase --abort || true
-            sleep 2
-          done
-          exit 1
+          if git diff --cached --quiet; then
+            echo 'Sem mudanças.'
+            exit 0
+          fi
+          git commit -m 'fix: ligar indicadores ao Google Sheets'
+          git push origin HEAD:main
