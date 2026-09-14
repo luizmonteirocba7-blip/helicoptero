@@ -350,6 +350,35 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
   border-color: rgba(147, 197, 253, 0.90) !important;
 }
 </style>
+<style id="summary-contract-layout-fix">
+#visao-geral > .grid {
+  align-items: stretch !important;
+}
+@media (min-width: 1280px) {
+  #visao-geral > .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+#visao-geral > .grid > .kpi-card,
+#visao-geral > .grid > .info-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 258px !important;
+  min-height: 258px !important;
+}
+#visao-geral > .grid > .kpi-feature {
+  height: 258px !important;
+  min-height: 258px !important;
+}
+@media (max-width: 1279px) {
+  #visao-geral > .grid > .kpi-card,
+  #visao-geral > .grid > .info-card {
+    height: auto !important;
+    min-height: 240px !important;
+  }
+}
+</style>
 </head>
  
 <body class="font-sans">
