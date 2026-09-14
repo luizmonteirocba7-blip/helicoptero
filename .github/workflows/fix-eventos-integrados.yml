@@ -31,33 +31,19 @@ jobs:
               raise SystemExit('Card Eventos Integrados não encontrado')
 
           chunk = text[start:end]
-          chunk = re.sub(
-              r'data-pdf-src="[^"]*"',
-              'data-pdf-src="https://drive.google.com/file/d/1Lq9PLWOmWD0P2Wb-W-afPW87yIm_uJs_/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
-          chunk = re.sub(
-              r'data-modal-src="[^"]*"',
-              'data-modal-src="https://drive.google.com/file/d/1u8S--WiD1MwYBE7on7_jhDKZrEmW_LpA/view?usp=drive_link"',
-              chunk,
-              count=1,
-          )
+          chunk = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1Lq9PLWOmWD0P2Wb-W-afPW87yIm_uJs_/view?usp=drive_link"', chunk, count=1)
+          chunk = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/1u8S--WiD1MwYBE7on7_jhDKZrEmW_LpA/view?usp=drive_link"', chunk, count=1)
           chunk = re.sub(r'\s*evidence-card-missing\b', '', chunk)
           chunk = re.sub(r'\s*evidence-card-complete\b', '', chunk)
-          chunk = chunk.replace('<div class="', '<div class="evidence-card-complete ', 1)
-          chunk = re.sub(
-              r'<div class="evidence-card-complete\s+',
-              '<div class="evidence-card-complete ',
-              chunk,
-              count=1,
-          )
-          chunk = re.sub(
-              r'<div class="evidence-card-complete ([^"]*)"',
-              lambda m: '<div class="evidence-card-complete ' + m.group(1) + '" style="background: rgba(30,64,175,0.32) !important; border-color: rgba(96,165,250,0.72) !important; box-shadow: inset 0 0 0 1px rgba(147,197,253,0.16), 0 8px 24px rgba(30,64,175,0.18) !important;"',
-              chunk,
-              count=1,
-          )
+          open_pos = chunk.find('<div class="')
+          open_end = chunk.find('>', open_pos)
+          if open_pos == -1 or open_end == -1:
+              raise SystemExit('Tag do card não encontrada')
+          open_tag = chunk[open_pos:open_end + 1]
+          clean_tag = open_tag.replace('class="', 'class="evidence-card-complete ', 1)
+          if 'style="' not in clean_tag:
+              clean_tag = clean_tag[:-1] + ' style="background: rgba(30,64,175,0.32) !important; border-color: rgba(96,165,250,0.72) !important; box-shadow: inset 0 0 0 1px rgba(147,197,253,0.16), 0 8px 24px rgba(30,64,175,0.18) !important;">'
+          chunk = chunk[:open_pos] + chunk[open_pos:].replace(open_tag, clean_tag, 1)
           text = text[:start] + chunk + text[end:]
           p.write_text(text, encoding='utf-8')
           print('Eventos Integrados corrigido: PDF, fotos e fundo azul.')
@@ -75,6 +61,7 @@ jobs:
           assert 'https://drive.google.com/file/d/1u8S--WiD1MwYBE7on7_jhDKZrEmW_LpA/view?usp=drive_link' in card
           assert 'class="evidence-card-complete ' in card
           assert 'evidence-card-missing' not in card.split('>')[0]
+          assert 'background: rgba(30,64,175,0.32)' in card
           print('Validação OK.')
           PY
 
@@ -88,3 +75,5 @@ jobs:
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
+
+# força nova execução após criação do workflow
