@@ -1,0 +1,90 @@
+name: Fix Eventos Integrados
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir card Eventos Integrados
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          start = text.find('<!-- 18. Eventos Integrados -->')
+          end = text.find('<!-- 19. Área Monitorada -->', start)
+          if start == -1 or end == -1:
+              raise SystemExit('Card Eventos Integrados não encontrado')
+
+          chunk = text[start:end]
+          chunk = re.sub(
+              r'data-pdf-src="[^"]*"',
+              'data-pdf-src="https://drive.google.com/file/d/1Lq9PLWOmWD0P2Wb-W-afPW87yIm_uJs_/view?usp=drive_link"',
+              chunk,
+              count=1,
+          )
+          chunk = re.sub(
+              r'data-modal-src="[^"]*"',
+              'data-modal-src="https://drive.google.com/file/d/1u8S--WiD1MwYBE7on7_jhDKZrEmW_LpA/view?usp=drive_link"',
+              chunk,
+              count=1,
+          )
+          chunk = re.sub(r'\s*evidence-card-missing\b', '', chunk)
+          chunk = re.sub(r'\s*evidence-card-complete\b', '', chunk)
+          chunk = chunk.replace('<div class="', '<div class="evidence-card-complete ', 1)
+          chunk = re.sub(
+              r'<div class="evidence-card-complete\s+',
+              '<div class="evidence-card-complete ',
+              chunk,
+              count=1,
+          )
+          chunk = re.sub(
+              r'<div class="evidence-card-complete ([^"]*)"',
+              lambda m: '<div class="evidence-card-complete ' + m.group(1) + '" style="background: rgba(30,64,175,0.32) !important; border-color: rgba(96,165,250,0.72) !important; box-shadow: inset 0 0 0 1px rgba(147,197,253,0.16), 0 8px 24px rgba(30,64,175,0.18) !important;"',
+              chunk,
+              count=1,
+          )
+          text = text[:start] + chunk + text[end:]
+          p.write_text(text, encoding='utf-8')
+          print('Eventos Integrados corrigido: PDF, fotos e fundo azul.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          s = html.find('<!-- 18. Eventos Integrados -->')
+          e = html.find('<!-- 19. Área Monitorada -->', s)
+          card = html[s:e]
+          assert 'https://drive.google.com/file/d/1Lq9PLWOmWD0P2Wb-W-afPW87yIm_uJs_/view?usp=drive_link' in card
+          assert 'https://drive.google.com/file/d/1u8S--WiD1MwYBE7on7_jhDKZrEmW_LpA/view?usp=drive_link' in card
+          assert 'class="evidence-card-complete ' in card
+          assert 'evidence-card-missing' not in card.split('>')[0]
+          print('Validação OK.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix: corrigir eventos integrados'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
