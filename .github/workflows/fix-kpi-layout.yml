@@ -17,41 +17,56 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Corrigir HTML quebrado
+      - name: Corrigir HTML quebrado sem alterar o banco de dados
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
-          broken = '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>'
-          fixed = '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>'
-
           changed = False
-          if broken in text:
-              text = text.replace(broken, fixed)
+
+          # Corrige qualquer fechamento quebrado do elemento de barra.
+          patterns = {
+              'kpi-bar-fill></div>': 'kpi-bar-fill"></div>',
+              'kpi-bar-fill></div': 'kpi-bar-fill"></div',
+          }
+          for broken, fixed in patterns.items():
+              if broken in text:
+                  text = text.replace(broken, fixed)
+                  changed = True
+
+          # Corrige também variações de classes com a mesma falha de aspas.
+          text2 = text.replace('class="kpi-bar-fill is-full>', 'class="kpi-bar-fill is-full">')
+          if text2 != text:
+              text = text2
               changed = True
 
-          # Garante que o card dinâmico de BM Efetivo continue sendo um item
-          # independente da grade, sem alterar os demais cards.
-          old = '<div class="kpi-card kpi-static kpi-feature kpi-feature-green" data-metric="Contratação de BM Efetivo"'
-          new = '<div class="kpi-card kpi-static kpi-feature kpi-feature-green" data-metric="Contratação de BM Efetivo"'
-          if old in text:
-              text = text.replace(old, new, 1)
-
           p.write_text(text, encoding='utf-8')
-          print('Layout corrigido:', changed)
+          print('HTML corrigido:', changed)
           PY
 
-      - name: Validar
+      - name: Validar estrutura do resumo
         run: |
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
-          assert '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>' not in html
-          assert '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>' in html
+
+          assert 'kpi-bar-fill></div>' not in html
+          assert 'class="kpi-bar-fill"></div>' in html
           assert 'data-metric="Contratação de BM Efetivo"' in html
-          print('Validação OK.')
+          assert 'INDICADORES_WEB_APP_URL' in html
+
+          # Confirma que os quatro cards permanecem no resumo do contrato.
+          for label in [
+              'Contratação BM Temporários',
+              'Contratação de BM Efetivo',
+              'Tempo Restante',
+              'Valor do Contrato',
+          ]:
+              assert label in html, label
+
+          print('Validação OK. Integração Google Sheets preservada.')
           PY
 
       - name: Commit e sincronizar
@@ -63,7 +78,11 @@ jobs:
             echo 'Nenhuma correção necessária.'
             exit 0
           fi
-          git commit -m 'fix: corrigir html do card efetivo'
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          git commit -m 'fix: corrigir estrutura dos cards do resumo'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
