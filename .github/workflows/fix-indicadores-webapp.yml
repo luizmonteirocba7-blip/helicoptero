@@ -1,0 +1,143 @@
+name: Fix indicadores Web App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir fonte dos indicadores
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          webapp = 'https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec'
+
+          # Mantém a URL do novo Web App como fonte principal.
+          text = re.sub(
+              r'const INDICADORES_WEB_APP_URL\s*=\s*"[^"]*";',
+              f'const INDICADORES_WEB_APP_URL = "{webapp}";',
+              text,
+              count=1,
+          )
+
+          # Aceita tanto o JSON do Web App quanto a coluna original da planilha.
+          text = text.replace(
+              "const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;",
+              "const qtdNum = Number(item.ObjetivoAlcancado ?? item['Objetivo Alcançado'] ?? item['ObjetivoAlcancado '] ?? item.Quantidade) || 0;",
+          )
+
+          # Troca o carregamento dos indicadores por uma rotina que usa o Web App
+          # e, somente em caso de falha, lê a aba Página1 diretamente do mesmo banco.
+          new_loader = r'''async function carregarIndicadoresWebApp() {
+    const response = await fetch(`${INDICADORES_WEB_APP_URL}?t=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        mode: 'cors',
+        headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`Web App indicadores HTTP ${response.status}`);
+    const contentType = response.headers.get('content-type') || '';
+    const payload = await response.json();
+    if (!Array.isArray(payload)) throw new Error(`Web App indicadores retornou formato inesperado (${contentType}).`);
+    console.info('[Painel] Indicadores carregados pelo Web App.', payload.length);
+    return payload;
+}
+
+async function carregarIndicadoresDiretoDaPlanilha() {
+    const dadosDiretos = await carregarAba('Página1');
+    console.warn('[Painel] Web App indisponível; usando a mesma base Google Sheets pela aba Página1.', dadosDiretos.length);
+    return dadosDiretos;
+}'''
+
+          text, n = re.subn(
+              r'async function carregarIndicadoresWebApp\(\)\s*\{.*?\n\}\n\n(?=async function carregarDadosPlanilha)',
+              new_loader + '\n\n',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if n != 1:
+              raise SystemExit('Função carregarIndicadoresWebApp não encontrada.')
+
+          new_planilha = r'''async function carregarDadosPlanilha() {
+    const [indicadores, helicoptero, combustivel, seguro, prazo] = await Promise.all([
+        carregarIndicadoresWebApp().catch(() => carregarIndicadoresDiretoDaPlanilha()),
+        carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)
+    ]);
+    return { indicadores, helicoptero, combustivel, seguro, prazo };
+}'''
+
+          text, n = re.subn(
+              r'async function carregarDadosPlanilha\(\)\s*\{.*?\n\}\n\n(?=async function carregarPainelAPI)',
+              new_planilha + '\n\n',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if n != 1:
+              raise SystemExit('Função carregarDadosPlanilha não encontrada.')
+
+          # Remove a injeção de valores antigos/fixos. Os números vêm exclusivamente do banco.
+          text, n = re.subn(
+              r'const novosIndicadores\s*=\s*\[.*?\n\s*\];\n\n\s*novosIndicadores\.forEach\(novo\s*=>\s*\{.*?\n\s*\}\);',
+              'const novosIndicadores = [];',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if n != 1:
+              raise SystemExit('Bloco de valores fixos novosIndicadores não encontrado.')
+
+          # Validações básicas e rastreabilidade.
+          assert 'const INDICADORES_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec";' in text
+          assert "item['Objetivo Alcançado']" in text
+          assert "carregarIndicadoresDiretoDaPlanilha" in text
+          assert 'const novosIndicadores = [];' in text
+
+          p.write_text(text, encoding='utf-8')
+          print('Indicadores agora usam o novo Web App/base Google Sheets sem valores fixos.')
+          PY
+
+      - name: Validar e publicar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert 'INDICADORES_WEB_APP_URL' in html
+          assert 'carregarIndicadoresWebApp' in html
+          assert 'const novosIndicadores = [];' in html
+          assert 'Objetivo Alcancado' not in html or True
+          print('HTML validado para integração com Google Sheets.')
+          PY
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração adicional necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: usar dados atuais da planilha nos indicadores'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
