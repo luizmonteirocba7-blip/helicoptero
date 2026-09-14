@@ -1257,6 +1257,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
    ========================================================= */
 const GOOGLE_SHEETS_ID = "1RrwaCAOjuDzU1_iIoMzUnEbcZgZO-ch7M4sLiYChYK8";
 const GOOGLE_SHEETS_BASE_URL = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_ID}/gviz/tq`;
+const INDICADORES_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzkC_i9XuxvmdDFx2NqAnfWZMzKnJpb9vqW5l3-V3ADPZDGA9E7N0gWEOP0C88n6EHq/exec";
 const FALLBACK_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxFblw567V43nn-yzpIEe8NA92pZTMDTSCpBLd868PMjmJfSmKr8Pg-Q2vwEOjWDlM6/exec";
 const STATUS_UPDATE_URL = '/api/update-status';
 const SHEET_LOAD_TIMEOUT_MS = 2500;
@@ -1442,15 +1443,30 @@ async function carregarAba(sheetName) {
         document.head.appendChild(script);
     });
 }
+async function carregarIndicadoresWebApp() {
+    const response = await fetch(`${INDICADORES_WEB_APP_URL}?t=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Accept': 'application/json' }
+    });
+    if (!response.ok) throw new Error(`Web App indicadores HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!Array.isArray(payload)) throw new Error('Web App indicadores não retornou uma lista JSON.');
+    return payload;
+}
+
 async function carregarDadosPlanilha() {
     try {
         const [indicadores, helicoptero, combustivel, seguro, prazo] = await Promise.all([
-            carregarAba(SHEET_NAMES.indicadores), carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)
+            carregarIndicadoresWebApp(), carregarAba(SHEET_NAMES.helicoptero), carregarAba(SHEET_NAMES.combustivel), carregarAba(SHEET_NAMES.seguro), carregarAba(SHEET_NAMES.prazo)
         ]);
         return { indicadores, helicoptero, combustivel, seguro, prazo };
     } catch (error) {
-        console.warn('Fallback Planilha Google.');
-        return fetch(FALLBACK_WEB_APP_URL).then(res => res.json());
+        console.warn('Web App/Planilha falhou; usando fallback existente.', error);
+        return fetch(FALLBACK_WEB_APP_URL, { cache: 'no-store' }).then(res => {
+            if (!res.ok) throw new Error(`Fallback HTTP ${res.status}`);
+            return res.json();
+        });
     }
 }
 
@@ -1462,9 +1478,17 @@ async function carregarPainelAPI(isRefresh = false) {
         const dadosPlanilha = await carregarDadosPlanilha();
         
         dados = (dadosPlanilha.indicadores || []).map(item => {
-            const indicadorNome = String(item['Indicador'] || item['Indicador '] || "Desconhecido");
+            const indicadorOriginal = String(item['Indicador'] || item['Indicador '] || "Desconhecido").trim();
+            const aliases = {
+                "Drone (RPAS)": "Aeronave Remotamente Pilotada",
+                "Formação de Brigadistas": "Capacitação de Brigadistas",
+                "Publicações Matérias": "Publicações",
+                "OP Órgãos Federais": "Op órgãos federais",
+                "OP Combate (Parceria)": "Op de Combate"
+            };
+            const indicadorNome = aliases[indicadorOriginal] || indicadorOriginal;
             const metaNum = Number(item.Meta) || 0;
-            const qtdNum = Number(item.Quantidade) || 0;
+            const qtdNum = Number(item.ObjetivoAlcancado ?? item.Quantidade) || 0;
             return { indicador: indicadorNome, meta: metaNum, qtd: qtdNum, percent: metaNum > 0 ? (qtdNum / metaNum) * 100 : (qtdNum > 0 ? 100 : 0) };
         });
 
