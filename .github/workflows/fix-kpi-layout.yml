@@ -1,0 +1,69 @@
+name: Fix layout do resumo do contrato
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir HTML quebrado
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          broken = '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>'
+          fixed = '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>'
+
+          changed = False
+          if broken in text:
+              text = text.replace(broken, fixed)
+              changed = True
+
+          # Garante que o card dinâmico de BM Efetivo continue sendo um item
+          # independente da grade, sem alterar os demais cards.
+          old = '<div class="kpi-card kpi-static kpi-feature kpi-feature-green" data-metric="Contratação de BM Efetivo"'
+          new = '<div class="kpi-card kpi-static kpi-feature kpi-feature-green" data-metric="Contratação de BM Efetivo"'
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          p.write_text(text, encoding='utf-8')
+          print('Layout corrigido:', changed)
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert '<div class="kpi-bar"><div class="kpi-bar-fill></div></div>' not in html
+          assert '<div class="kpi-bar"><div class="kpi-bar-fill"></div></div>' in html
+          assert 'data-metric="Contratação de BM Efetivo"' in html
+          print('Validação OK.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma correção necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: corrigir html do card efetivo'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
