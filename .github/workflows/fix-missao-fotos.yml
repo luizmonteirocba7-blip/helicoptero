@@ -37,38 +37,28 @@ jobs:
 
           photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
 
-          # Mantém o caminho da imagem no campo usado pelos outros cards.
-          chunk = re.sub(
-              r'data-modal-src="[^"]*"',
-              f'data-modal-src="{photo}"',
-              chunk,
-              count=1,
+          # Substitui o botão FOTOS inteiro, preservando o padrão usado pelos cards que já funcionam.
+          button_pattern = re.compile(r'<button type="button" class="ev-thumb[^>]*>.*?</button>', re.S)
+          replacement = (
+              '<button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 '
+              '!bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 '
+              '!text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] '
+              '!font-extrabold !uppercase tracking-wider transition-colors" '
+              f'data-modal-src="{photo}" data-drive-link="1">\n'
+              '                <i class="fa-solid fa-camera"></i> Fotos\n'
+              '              </button>'
           )
 
-          # Remove eventual texto inválido que tenha sido inserido dentro do botão.
-          chunk = re.sub(
-              r'(\n\s*)data-drive-link="1">(\s*\n\s*)(?=<i class="fa-solid fa-camera"></i> Fotos)',
-              r'\1\2',
-              chunk,
-              count=1,
-          )
-
-          # Coloca data-drive-link="1" no próprio elemento <button>, como nos demais cards.
-          button_pattern = r'(<button[^>]*class="[^"]*ev-thumb[^"]*"[^>]*)(>)'
-          match = re.search(button_pattern, chunk)
-          if not match:
+          matches = list(button_pattern.finditer(chunk))
+          if not matches:
               raise SystemExit('Botão FOTOS não encontrado no card Missões de Fiscalização.')
+          if len(matches) != 1:
+              raise SystemExit(f'Esperado 1 botão FOTOS; encontrado {len(matches)}.')
 
-          opening = match.group(1)
-          if 'data-drive-link=' in opening:
-              opening = re.sub(r'\sdata-drive-link="[^"]*"', '', opening, count=1)
-          opening += ' data-drive-link="1"'
-          replacement = opening + match.group(2)
-          chunk = chunk[:match.start()] + replacement + chunk[match.end():]
-
+          chunk = button_pattern.sub(replacement, chunk, count=1)
           text = text[:start] + chunk + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('FOTOS de Missões de Fiscalização corrigido.')
+          print('Botão FOTOS de Missões de Fiscalização reconstruído corretamente.')
           PY
 
       - name: Validar
@@ -80,15 +70,16 @@ jobs:
           html = Path('index.html').read_text(encoding='utf-8')
           marker = '<!-- 10. Missões de Fiscalização -->'
           start = html.find(marker)
-          assert start >= 0
+          assert start >= 0, 'Card não encontrado'
           end = html.find('\n          <!--', start + len(marker))
           chunk = html[start:end if end >= 0 else len(html)]
 
-          assert 'data-modal-src="https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link"' in chunk
-          assert re.search(r'<button[^>]*class="[^"]*ev-thumb[^"]*"[^>]*data-drive-link="1"[^>]*>', chunk)
-          assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk
-          assert 'data-drive-link="1">' not in re.sub(r'<button[^>]*>', '', chunk)
-          print('Validação OK: link da foto está no botão, como nos outros cards.')
+          expected = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+          assert expected in chunk, 'Link da foto ausente'
+          assert re.search(r'<button type="button" class="[^"]*ev-thumb[^"]*"[^>]*data-modal-src="' + re.escape(expected) + r'"[^>]*data-drive-link="1"[^>]*>', chunk), 'Atributos do botão incorretos'
+          assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk, 'Texto data-drive-link ainda aparece dentro do botão'
+          assert 'data-drive-link="1">' not in re.sub(r'<button[^>]*>', '', chunk), 'Atributo fora da tag do botão'
+          print('Validação OK: botão FOTOS com link do Drive e estrutura correta.')
           PY
 
       - name: Commit e sincronizar
@@ -100,7 +91,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: corrigir botao fotos de missoes'
+          git commit -m 'fix: reconstruir botao fotos missoes'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
