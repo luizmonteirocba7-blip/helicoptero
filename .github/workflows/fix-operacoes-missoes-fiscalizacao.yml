@@ -40,12 +40,9 @@ jobs:
               return start, next_marker, text[start:next_marker]
 
           def normalize_class(chunk, complete):
-              # Remove classes conflitantes e preserva todo o restante.
               chunk = re.sub(r'\bevidence-card-(?:complete|missing)\b', '', chunk)
               desired = 'evidence-card-complete' if complete else 'evidence-card-missing'
-              # A primeira div do card recebe a classe de estado visual.
               chunk = re.sub(r'(<div[^>]*class=")', r'\1' + desired + ' ', chunk, count=1)
-              # Remove estilos inline antigos que poderiam manter o azul quando o card deve ficar vermelho.
               chunk = re.sub(r'\sstyle="[^"]*"', '', chunk, count=1)
               return chunk
 
@@ -67,20 +64,26 @@ jobs:
           chunk = normalize_class(chunk, complete=True)
           chunk = set_attr(chunk, 'data-pdf-src', PDF)
           chunk = set_attr(chunk, 'data-modal-src', FOTO)
-          # Marca explicitamente o botão de foto como link do Drive.
+
+          # Marca explicitamente o botão de foto como link externo do Drive.
+          button_pattern = r'(<button\b[^>]*data-modal-src="[^"]*")(?=>)'
           if 'data-drive-link=' in chunk:
               chunk = re.sub(r'data-drive-link="[^"]*"', 'data-drive-link="1"', chunk, count=1)
+          else:
+              chunk, added = re.subn(button_pattern, r'\1 data-drive-link="1"', chunk, count=1)
+              if added != 1:
+                  raise SystemExit('Botão FOTOS de Missões de Fiscalização não encontrado.')
+
           text = text[:start] + chunk + text[end:]
 
           p.write_text(text, encoding='utf-8')
-          print('Cards corrigidos: Operações sem evidências; Missões com PDF e fotos.')
+          print('Cards corrigidos: Operações sem evidências; Missões com PDF e fotos + link externo.')
           PY
 
       - name: Validar estado final dos cards
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           html = Path('index.html').read_text(encoding='utf-8')
 
@@ -102,8 +105,9 @@ jobs:
           assert 'evidence-card-complete' in mis
           assert '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' in mis
           assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in mis
+          assert 'data-drive-link="1"' in mis
 
-          print('Validação OK: os dois cards estão separados e com os links corretos.')
+          print('Validação OK: os dois cards estão separados e o botão FOTOS da Missões está como link externo.')
           PY
 
       - name: Commit e sincronizar
@@ -115,7 +119,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: separar evidencias de operacoes e missoes de fiscalizacao'
+          git commit -m 'fix: habilitar link externo da foto de missoes'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
