@@ -1,0 +1,98 @@
+name: Vincular evidências de Autos e Operações de Fiscalização
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  link-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar links dos cards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          def update_card(text, marker, pdf, photo):
+              start = text.find(marker)
+              if start < 0:
+                  raise SystemExit(f'Card nao encontrado: {marker}')
+              end = text.find('\n          <!--', start + len(marker))
+              if end < 0:
+                  end = len(text)
+              chunk = text[start:end]
+
+              chunk2 = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf}"', chunk, count=1)
+              if chunk2 == chunk:
+                  raise SystemExit(f'Campo PDF nao encontrado em {marker}')
+              chunk = chunk2
+
+              chunk2 = re.sub(r'data-modal-src="[^"]*"', f'data-modal-src="{photo}"', chunk, count=1)
+              if chunk2 == chunk:
+                  raise SystemExit(f'Campo de fotos nao encontrado em {marker}')
+              chunk = chunk2
+
+              return text[:start] + chunk + text[end:]
+
+          # Autos de Infração
+          text = update_card(
+              text,
+              '<!-- 20. Autos de Infração -->',
+              'https://drive.google.com/file/d/1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt/view?usp=drive_link',
+              'https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link'
+          )
+
+          # Operações de Fiscalização
+          text = update_card(
+              text,
+              '<!-- 9. Operações de Fiscalização -->',
+              'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link',
+              'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+          )
+
+          p.write_text(text, encoding='utf-8')
+          print('Links dos dois cards atualizados.')
+          PY
+
+      - name: Validar links
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          checks = [
+            '1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt',
+            '1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5',
+            '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K',
+            '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4',
+          ]
+          for value in checks:
+              assert value in html, value
+          print('Validacao OK: os quatro links estao no index.html.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteracao necessaria.'
+            exit 0
+          fi
+          git commit -m 'fix: vincular evidencias de autos e fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
