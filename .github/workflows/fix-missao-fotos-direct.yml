@@ -1,0 +1,87 @@
+name: Corrigir definitivamente foto de Missões de Fiscalização
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir somente o botão FOTOS de Missões de Fiscalização
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+          marker = '<!-- 10. Missões de Fiscalização -->'
+          start = html.find(marker)
+          if start < 0:
+              raise SystemExit('Card Missões de Fiscalização não encontrado.')
+          end = html.find('\n          <!--', start + len(marker))
+          if end < 0:
+              end = len(html)
+
+          chunk = html[start:end]
+          photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+
+          pattern = re.compile(r'<button type="button" class="ev-thumb[^>]*>.*?</button>', re.S)
+          matches = pattern.findall(chunk)
+          if len(matches) != 1:
+              raise SystemExit(f'Esperado exatamente 1 botão FOTOS no card; encontrado {len(matches)}.')
+
+          replacement = (
+              '<button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 '
+              '!bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 '
+              '!text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] '
+              '!font-extrabold !uppercase tracking-wider transition-colors" '
+              f'data-modal-src="{photo}" data-drive-link="1">\n'
+              '                <i class="fa-solid fa-camera"></i> Fotos\n'
+              '              </button>'
+          )
+
+          chunk = pattern.sub(replacement, chunk, count=1)
+          html = html[:start] + chunk + html[end:]
+          path.write_text(html, encoding='utf-8')
+          print('Botão FOTOS corrigido sem alterar o restante do card.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          marker = '<!-- 10. Missões de Fiscalização -->'
+          start = html.find(marker)
+          end = html.find('\n          <!--', start + len(marker))
+          chunk = html[start:end if end >= 0 else len(html)]
+          photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+          assert f'data-modal-src="{photo}" data-drive-link="1">' in chunk
+          assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' in chunk
+          assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk.replace('data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos','')
+          print('Validação OK.')
+          PY
+
+      - name: Commit index corrigido
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Index já estava correto.'
+            exit 0
+          fi
+          git commit -m 'fix: corrigir botao fotos de missoes fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
