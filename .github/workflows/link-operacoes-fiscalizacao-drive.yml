@@ -1,0 +1,91 @@
+name: Vincular evidências de Operações de Fiscalização
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar links do Drive
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          pdf = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
+          foto = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+
+          # Localiza exclusivamente o card de evidências pelo título visível.
+          pattern = re.compile(
+              r'(?P<card><div[^>]*>.*?<h4[^>]*>Operações de Fiscalização</h4>.*?</div>\s*</div>)',
+              re.I | re.S,
+          )
+          m = pattern.search(text)
+          if not m:
+              # Tenta o título sem acento para evitar falha por normalização.
+              pattern = re.compile(
+                  r'(?P<card><div[^>]*>.*?<h4[^>]*>Opera(?:ções|coes) de Fiscalização</h4>.*?</div>\s*</div>)',
+                  re.I | re.S,
+              )
+              m = pattern.search(text)
+          if not m:
+              raise SystemExit('Card de Operações de Fiscalização não encontrado.')
+
+          card = m.group('card')
+
+          # O botão PDF usa data-pdf-src; se já existir, apenas troca o caminho.
+          if 'data-pdf-src=' in card:
+              card = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf}"', card, count=1)
+          else:
+              raise SystemExit('Campo data-pdf-src não encontrado no card de Operações de Fiscalização.')
+
+          # O botão de fotos usa data-modal-src; atualiza o caminho existente.
+          if 'data-modal-src=' in card:
+              card = re.sub(r'data-modal-src="[^"]*"', f'data-modal-src="{foto}"', card, count=1)
+          elif 'data-thumb-src=' in card:
+              card = re.sub(r'data-thumb-src="[^"]*"', f'data-thumb-src="{foto}"', card, count=1)
+          else:
+              raise SystemExit('Campo de fotos não encontrado no card de Operações de Fiscalização.')
+
+          text = text[:m.start('card')] + card + text[m.end('card'):]
+          p.write_text(text, encoding='utf-8')
+          print('Links do Drive aplicados em Operações de Fiscalização.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' in html
+          assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in html
+          print('Validação OK.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: vincular evidencias de operacoes de fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
