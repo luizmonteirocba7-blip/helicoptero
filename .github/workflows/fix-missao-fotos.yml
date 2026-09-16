@@ -37,6 +37,7 @@ jobs:
 
           photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
 
+          # Mantém o caminho da imagem no campo usado pelos outros cards.
           chunk = re.sub(
               r'data-modal-src="[^"]*"',
               f'data-modal-src="{photo}"',
@@ -44,17 +45,26 @@ jobs:
               count=1,
           )
 
-          if 'data-modal-src=' not in chunk:
+          # Remove eventual texto inválido que tenha sido inserido dentro do botão.
+          chunk = re.sub(
+              r'(\n\s*)data-drive-link="1">(\s*\n\s*)(?=<i class="fa-solid fa-camera"></i> Fotos)',
+              r'\1\2',
+              chunk,
+              count=1,
+          )
+
+          # Coloca data-drive-link="1" no próprio elemento <button>, como nos demais cards.
+          button_pattern = r'(<button[^>]*class="[^"]*ev-thumb[^"]*"[^>]*)(>)'
+          match = re.search(button_pattern, chunk)
+          if not match:
               raise SystemExit('Botão FOTOS não encontrado no card Missões de Fiscalização.')
 
-          if 'data-drive-link=' in chunk:
-              chunk = re.sub(r'data-drive-link="[^"]*"', 'data-drive-link="1"', chunk, count=1)
-          else:
-              chunk = chunk.replace(
-                  '<i class="fa-solid fa-camera"></i> Fotos',
-                  'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos',
-                  1,
-              )
+          opening = match.group(1)
+          if 'data-drive-link=' in opening:
+              opening = re.sub(r'\sdata-drive-link="[^"]*"', '', opening, count=1)
+          opening += ' data-drive-link="1"'
+          replacement = opening + match.group(2)
+          chunk = chunk[:match.start()] + replacement + chunk[match.end():]
 
           text = text[:start] + chunk + text[end:]
           p.write_text(text, encoding='utf-8')
@@ -65,15 +75,20 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
+
           html = Path('index.html').read_text(encoding='utf-8')
           marker = '<!-- 10. Missões de Fiscalização -->'
           start = html.find(marker)
           assert start >= 0
           end = html.find('\n          <!--', start + len(marker))
           chunk = html[start:end if end >= 0 else len(html)]
-          assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in chunk
-          assert 'data-drive-link="1"' in chunk
-          print('Validação OK.')
+
+          assert 'data-modal-src="https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link"' in chunk
+          assert re.search(r'<button[^>]*class="[^"]*ev-thumb[^"]*"[^>]*data-drive-link="1"[^>]*>', chunk)
+          assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk
+          assert 'data-drive-link="1">' not in re.sub(r'<button[^>]*>', '', chunk)
+          print('Validação OK: link da foto está no botão, como nos outros cards.')
           PY
 
       - name: Commit e sincronizar
@@ -85,7 +100,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: ativar foto de missoes de fiscalizacao'
+          git commit -m 'fix: corrigir botao fotos de missoes'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
