@@ -1,0 +1,91 @@
+name: Corrigir foto de Missões de Fiscalização
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir botão FOTOS da Missões de Fiscalização
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          marker = '<!-- 10. Missões de Fiscalização -->'
+          start = text.find(marker)
+          if start < 0:
+              raise SystemExit('Card Missões de Fiscalização não encontrado.')
+
+          end = text.find('\n          <!--', start + len(marker))
+          if end < 0:
+              end = len(text)
+          chunk = text[start:end]
+
+          photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+
+          chunk = re.sub(
+              r'data-modal-src="[^"]*"',
+              f'data-modal-src="{photo}"',
+              chunk,
+              count=1,
+          )
+
+          if 'data-modal-src=' not in chunk:
+              raise SystemExit('Botão FOTOS não encontrado no card Missões de Fiscalização.')
+
+          if 'data-drive-link=' in chunk:
+              chunk = re.sub(r'data-drive-link="[^"]*"', 'data-drive-link="1"', chunk, count=1)
+          else:
+              chunk = chunk.replace(
+                  '<i class="fa-solid fa-camera"></i> Fotos',
+                  'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos',
+                  1,
+              )
+
+          text = text[:start] + chunk + text[end:]
+          p.write_text(text, encoding='utf-8')
+          print('FOTOS de Missões de Fiscalização corrigido.')
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          marker = '<!-- 10. Missões de Fiscalização -->'
+          start = html.find(marker)
+          assert start >= 0
+          end = html.find('\n          <!--', start + len(marker))
+          chunk = html[start:end if end >= 0 else len(html)]
+          assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in chunk
+          assert 'data-drive-link="1"' in chunk
+          print('Validação OK.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: ativar foto de missoes de fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
