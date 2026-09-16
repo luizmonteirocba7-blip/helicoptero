@@ -1,0 +1,118 @@
+name: Estado final das evidencias de fiscalizacao
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Corrigir somente os cards 9 e 10
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          op_marker = '<!-- 9. Operações de Fiscalização -->'
+          mi_marker = '<!-- 10. Missões de Fiscalização -->'
+          end_marker = '<!-- 11. Formação de Brigadistas -->'
+          op_start = html.find(op_marker)
+          mi_start = html.find(mi_marker)
+          end = html.find(end_marker)
+          if min(op_start, mi_start, end) < 0:
+              raise SystemExit('Marcadores dos cards 9/10/11 não encontrados')
+
+          op_chunk = html[op_start:mi_start]
+          mi_chunk = html[mi_start:end]
+
+          op_pdf = 'https://drive.google.com/file/d/dummy/view'
+          mi_pdf = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
+          mi_photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+
+          # Mantém o conteúdo da operação vazio/placeholder.
+          op_chunk = re.sub(r'evidence-card-(?:complete|missing)', 'evidence-card-missing', op_chunk, count=1)
+          op_buttons = re.compile(r'<div class="grid grid-cols-2 gap-2 mt-auto">.*?</div>\s*</div>\s*$', re.S)
+          op_replacement = '''<div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>'''
+          op_chunk, n1 = op_buttons.subn(op_replacement, op_chunk, count=1)
+          if n1 != 1:
+              raise SystemExit('Não foi possível normalizar Operações de Fiscalização')
+
+          # Missões recebe exatamente os dois links e fica completo.
+          mi_chunk = re.sub(r'evidence-card-(?:complete|missing)', 'evidence-card-complete', mi_chunk, count=1)
+          mi_buttons = re.compile(r'<div class="grid grid-cols-2 gap-2 mt-auto">.*?</div>\s*</div>\s*$', re.S)
+          mi_replacement = f'''<div class="grid grid-cols-2 gap-2 mt-auto">
+              <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="{mi_pdf}">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="{mi_photo}" data-drive-link="1">
+                <i class="fa-solid fa-camera"></i> Fotos
+              </button>
+            </div>
+          </div>'''
+          mi_chunk, n2 = mi_buttons.subn(mi_replacement, mi_chunk, count=1)
+          if n2 != 1:
+              raise SystemExit('Não foi possível normalizar Missões de Fiscalização')
+
+          # Reescreve apenas os dois cards.
+          html = html[:op_start] + op_chunk + mi_chunk + html[end:]
+          path.write_text(html, encoding='utf-8')
+          print('Cards 9 e 10 normalizados.')
+
+      - name: Validar estado final
+        shell: python
+        run: |
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          op_start = html.find('<!-- 9. Operações de Fiscalização -->')
+          mi_start = html.find('<!-- 10. Missões de Fiscalização -->')
+          end = html.find('<!-- 11. Formação de Brigadistas -->')
+          op = html[op_start:mi_start]
+          mi = html[mi_start:end]
+
+          mi_pdf = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
+          mi_photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+
+          assert 'evidence-card-missing' in op
+          assert 'data-pdf-src=""' in op
+          assert 'Aguardando+Fotos' in op
+          assert mi_pdf in mi
+          assert mi_photo in mi
+          assert 'data-drive-link="1"' in mi
+          assert 'data-drive-link="1">' not in mi
+          assert '\n                data-drive-link' not in mi
+          assert mi.count('class="ev-thumb') == 1
+          print('Estado final validado.')
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: estado final dos cards fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
