@@ -1,0 +1,121 @@
+name: Corrigir cards Operações e Missões de Fiscalização
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Separar cards e corrigir evidências
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          PDF = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
+          FOTO = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+          PLACEHOLDER = 'https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat'
+
+          def get_card(text, marker):
+              start = text.find(marker)
+              if start < 0:
+                  raise SystemExit(f'Card não encontrado: {marker}')
+              next_marker = text.find('\n          <!--', start + len(marker))
+              if next_marker < 0:
+                  next_marker = len(text)
+              return start, next_marker, text[start:next_marker]
+
+          def normalize_class(chunk, complete):
+              # Remove classes conflitantes e preserva todo o restante.
+              chunk = re.sub(r'\bevidence-card-(?:complete|missing)\b', '', chunk)
+              desired = 'evidence-card-complete' if complete else 'evidence-card-missing'
+              # A primeira div do card recebe a classe de estado visual.
+              chunk = re.sub(r'(<div[^>]*class=")', r'\1' + desired + ' ', chunk, count=1)
+              # Remove estilos inline antigos que poderiam manter o azul quando o card deve ficar vermelho.
+              chunk = re.sub(r'\sstyle="[^"]*"', '', chunk, count=1)
+              return chunk
+
+          def set_attr(chunk, attr, value):
+              pattern = rf'{attr}="[^"]*"'
+              if not re.search(pattern, chunk, flags=re.I):
+                  raise SystemExit(f'Atributo {attr} não encontrado')
+              return re.sub(pattern, f'{attr}="{value}"', chunk, count=1, flags=re.I)
+
+          # 9. Operações de Fiscalização = SEM conteúdo -> vermelho.
+          start, end, chunk = get_card(text, '<!-- 9. Operações de Fiscalização -->')
+          chunk = normalize_class(chunk, complete=False)
+          chunk = set_attr(chunk, 'data-pdf-src', '')
+          chunk = set_attr(chunk, 'data-modal-src', PLACEHOLDER)
+          text = text[:start] + chunk + text[end:]
+
+          # 10. Missões de Fiscalização = COM conteúdo -> azul.
+          start, end, chunk = get_card(text, '<!-- 10. Missões de Fiscalização -->')
+          chunk = normalize_class(chunk, complete=True)
+          chunk = set_attr(chunk, 'data-pdf-src', PDF)
+          chunk = set_attr(chunk, 'data-modal-src', FOTO)
+          # Marca explicitamente o botão de foto como link do Drive.
+          if 'data-drive-link=' in chunk:
+              chunk = re.sub(r'data-drive-link="[^"]*"', 'data-drive-link="1"', chunk, count=1)
+          text = text[:start] + chunk + text[end:]
+
+          p.write_text(text, encoding='utf-8')
+          print('Cards corrigidos: Operações sem evidências; Missões com PDF e fotos.')
+          PY
+
+      - name: Validar estado final dos cards
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          html = Path('index.html').read_text(encoding='utf-8')
+
+          def get_chunk(marker):
+              start = html.find(marker)
+              assert start >= 0, marker
+              end = html.find('\n          <!--', start + len(marker))
+              if end < 0:
+                  end = len(html)
+              return html[start:end]
+
+          oper = get_chunk('<!-- 9. Operações de Fiscalização -->')
+          mis = get_chunk('<!-- 10. Missões de Fiscalização -->')
+
+          assert 'evidence-card-missing' in oper
+          assert 'data-pdf-src=""' in oper
+          assert 'Aguardando+Fotos' in oper
+
+          assert 'evidence-card-complete' in mis
+          assert '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' in mis
+          assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in mis
+
+          print('Validação OK: os dois cards estão separados e com os links corretos.')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: separar evidencias de operacoes e missoes de fiscalizacao'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
