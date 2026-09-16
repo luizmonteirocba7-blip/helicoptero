@@ -1,0 +1,93 @@
+name: Atualizar evidencias Fiscalizacao e Autos
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar links dos dois cards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          cards = {
+              'Autos de Infração': {
+                  'pdf': 'https://drive.google.com/file/d/1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt/view?usp=drive_link',
+                  'foto': 'https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link',
+              },
+              'Operações de Fiscalização': {
+                  'pdf': 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link',
+                  'foto': 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link',
+              },
+          }
+
+          for title, links in cards.items():
+              marker = f'<h4 class="text-white text-[13px] font-bold leading-snug">{title}</h4>'
+              pos = text.find(marker)
+              if pos == -1:
+                  raise SystemExit(f'Card nao encontrado: {title}')
+
+              end = text.find('</div>', pos)
+              if end == -1:
+                  raise SystemExit(f'Fim do card nao encontrado: {title}')
+
+              start_card = text.rfind('<div class="evidence-card', 0, pos)
+              next_card = text.find('<div class="evidence-card', pos + len(marker))
+              card_end = next_card if next_card != -1 else len(text)
+              chunk = text[start_card:card_end]
+
+              pdf_pat = re.compile(r'(data-pdf-src=")[^"]*(")')
+              foto_pat = re.compile(r'(data-modal-src=")[^"]*(")')
+
+              chunk2, n1 = pdf_pat.subn(r'\g<1>' + links['pdf'] + r'\g<2>', chunk, count=1)
+              chunk3, n2 = foto_pat.subn(r'\g<1>' + links['foto'] + r'\g<2>', chunk2, count=1)
+
+              if n1 != 1:
+                  raise SystemExit(f'Campo PDF nao encontrado/duplicado: {title}')
+              if n2 != 1:
+                  raise SystemExit(f'Campo FOTO nao encontrado/duplicado: {title}')
+
+              text = text[:start_card] + chunk3 + text[card_end:]
+
+          p.write_text(text, encoding='utf-8')
+          print('Links atualizados com sucesso.')
+          PY
+
+      - name: Validar
+        run: |
+          grep -q '1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt' index.html
+          grep -q '1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5' index.html
+          grep -q '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' index.html
+          grep -q '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' index.html
+          echo 'Validacao OK.'
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteracao necessaria.'
+            exit 0
+          fi
+          git commit -m 'fix: vincular evidencias de fiscalizacao e autos'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
