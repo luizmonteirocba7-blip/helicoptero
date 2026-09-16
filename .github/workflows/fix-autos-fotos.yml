@@ -1,0 +1,40 @@
+name: Fix fotos do card Autos de Infracao
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-autos-fotos.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Corrigir atributo do botao Fotos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'data-modal-src="https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link">'
+          new = 'data-modal-src="https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link" data-drive-link="1">'
+          if old not in s:
+              raise SystemExit('Trecho esperado nao encontrado no card Autos de Infracao.')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+          print('Atributo data-drive-link adicionado ao Fotos de Autos de Infracao.')
+          PY
+
+      - name: Commit e push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: habilitar fotos em autos de infracao'
+          git push
