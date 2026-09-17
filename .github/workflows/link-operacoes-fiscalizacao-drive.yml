@@ -26,44 +26,24 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
-          pdf = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
-          foto = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+          pdf = 'https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link'
+          foto = 'https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link'
 
-          # Localiza exclusivamente o card de evidências pelo título visível.
-          pattern = re.compile(
-              r'(?P<card><div[^>]*>.*?<h4[^>]*>Operações de Fiscalização</h4>.*?</div>\s*</div>)',
-              re.I | re.S,
-          )
-          m = pattern.search(text)
-          if not m:
-              # Tenta o título sem acento para evitar falha por normalização.
-              pattern = re.compile(
-                  r'(?P<card><div[^>]*>.*?<h4[^>]*>Opera(?:ções|coes) de Fiscalização</h4>.*?</div>\s*</div>)',
-                  re.I | re.S,
-              )
-              m = pattern.search(text)
-          if not m:
+          marker = '<!-- 9. Operações de Fiscalização -->'
+          next_marker = '<!-- 10. Missões de Fiscalização -->'
+          start = text.find(marker)
+          end = text.find(next_marker, start)
+          if start < 0 or end < 0:
               raise SystemExit('Card de Operações de Fiscalização não encontrado.')
 
-          card = m.group('card')
+          card = text[start:end]
+          card = re.sub(r'evidence-card-(?:complete|missing)', 'evidence-card-complete', card, count=1)
+          card = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf}"', card, count=1)
+          card = re.sub(r'data-modal-src="[^"]*"', f'data-modal-src="{foto}" data-drive-link="1"', card, count=1)
 
-          # O botão PDF usa data-pdf-src; se já existir, apenas troca o caminho.
-          if 'data-pdf-src=' in card:
-              card = re.sub(r'data-pdf-src="[^"]*"', f'data-pdf-src="{pdf}"', card, count=1)
-          else:
-              raise SystemExit('Campo data-pdf-src não encontrado no card de Operações de Fiscalização.')
-
-          # O botão de fotos usa data-modal-src; atualiza o caminho existente.
-          if 'data-modal-src=' in card:
-              card = re.sub(r'data-modal-src="[^"]*"', f'data-modal-src="{foto}"', card, count=1)
-          elif 'data-thumb-src=' in card:
-              card = re.sub(r'data-thumb-src="[^"]*"', f'data-thumb-src="{foto}"', card, count=1)
-          else:
-              raise SystemExit('Campo de fotos não encontrado no card de Operações de Fiscalização.')
-
-          text = text[:m.start('card')] + card + text[m.end('card'):]
+          text = text[:start] + card + text[end:]
           p.write_text(text, encoding='utf-8')
-          print('Links do Drive aplicados em Operações de Fiscalização.')
+          print('Operações de Fiscalização: links canônicos e card completo aplicados.')
           PY
 
       - name: Validar
@@ -71,8 +51,13 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
-          assert '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' in html
-          assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in html
+          start = html.find('<!-- 9. Operações de Fiscalização -->')
+          end = html.find('<!-- 10. Missões de Fiscalização -->', start)
+          block = html[start:end]
+          assert 'evidence-card-complete' in block
+          assert '1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le' in block
+          assert '14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa' in block
+          assert 'data-drive-link="1"' in block
           print('Validação OK.')
           PY
 
@@ -85,7 +70,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: vincular evidencias de operacoes de fiscalizacao'
+          git commit -m 'fix: vincular evidencias canonicas de operacoes de fiscalizacao'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
