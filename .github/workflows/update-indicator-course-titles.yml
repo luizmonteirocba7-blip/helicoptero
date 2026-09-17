@@ -1,0 +1,93 @@
+name: Alinhar títulos dos cursos nos indicadores
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar títulos dos indicadores
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          start = html.find('<section id="indicadores"')
+          if start < 0:
+              raise SystemExit('Seção de indicadores não encontrada.')
+          end = html.find('</section>', start)
+          if end < 0:
+              raise SystemExit('Fim da seção de indicadores não encontrado.')
+          end += len('</section>')
+
+          chunk = html[start:end]
+          replacements = {
+              'Infrações Administrativas': 'Curso de Infrações Administrativas',
+              'Perícia de Incêndios': 'Curso de Perícia de Incêndios Florestais',
+              'Prevenção e Combate': 'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Drone (RPAS)': 'Curso de Aeronave Remotamente Pilotada',
+              'Fogo Técnico': 'Curso de Fogo Técnico',
+          }
+
+          for old, new in replacements.items():
+              pattern = rf'(<div class="kpi-label">){re.escape(old)}(</div>)'
+              chunk, count = re.subn(pattern, rf'\g<1>{new}\g<2>', chunk, count=1)
+              if count != 1:
+                  if f'<div class="kpi-label">{new}</div>' not in chunk:
+                      raise SystemExit(f'Título não encontrado: {old}')
+
+          html = html[:start] + chunk + html[end:]
+          path.write_text(html, encoding='utf-8')
+          print('Títulos dos cursos atualizados nos indicadores.')
+
+      - name: Validar
+        shell: python
+        run: |
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          start = html.find('<section id="indicadores"')
+          end = html.find('</section>', start) + len('</section>')
+          chunk = html[start:end]
+          expected = [
+              'Curso de Infrações Administrativas',
+              'Curso de Perícia de Incêndios Florestais',
+              'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Curso de Aeronave Remotamente Pilotada',
+              'Curso de Fogo Técnico',
+          ]
+          for title in expected:
+              assert f'<div class="kpi-label">{title}</div>' in chunk, title
+          assert 'data-metric="Infrações Administrativas"' in chunk
+          assert 'data-metric="Perícia de Incêndios"' in chunk
+          assert 'data-metric="Prevenção e Combate"' in chunk
+          assert 'data-metric="Aeronave Remotamente Pilotada"' in chunk
+          assert 'data-metric="Fogo Técnico"' in chunk
+          print('Validação OK: títulos visuais atualizados sem alterar os data-metric.')
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: alinhar titulos dos cursos nos indicadores'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
