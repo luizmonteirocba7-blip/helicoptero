@@ -61,6 +61,54 @@ jobs:
           print('Botão FOTOS de Missões de Fiscalização reconstruído corretamente.')
           PY
 
+      - name: Sincronizar titulos da Visão Geral com a Central de Comprovações
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          mapping = {
+              'Infrações Administrativas': 'Infrações Administrativas',
+              'Perícia de Incêndios': 'Perícia de Incêndios',
+              'Prevenção e Combate': 'Prevenção e Combate',
+              'Aeronave Remotamente Pilotada': 'Drone (RPAS)',
+              'Fogo Técnico': 'Fogo Técnico',
+              'Campanhas': 'Campanhas',
+              'Semana de Prevenção': 'Semana de Prevenção',
+              'Missões de Combate': 'Missões de Combate',
+              'Operações de Fiscalização': 'Operações de Fiscalização',
+              'Missões de Fiscalização': 'Missões de Fiscalização',
+              'Capacitação de Brigadistas': 'Formação de Brigadistas',
+              'Brigada Municipal Mista': 'Brigada Municipal Mista',
+              'Publicações': 'Publicações Matérias',
+              'Focos de Calor': 'Focos de Calor',
+              'BM FEM Capacitadas': 'BM FEM Capacitadas',
+              'Op órgãos federais': 'OP Órgãos Federais',
+              'Op de Combate': 'OP Combate (Parceria)',
+              'Eventos Integrados': 'Eventos Integrados',
+              'Área Monitorada': 'Área Monitorada',
+              'Autos de Infração': 'Autos de Infração',
+          }
+
+          changed = 0
+          for metric, title in mapping.items():
+              card_pattern = re.compile(
+                  r'(<button[^>]*class="[^"]*\\bkpi-card\\b[^"]*"[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  re.S|re.I
+              )
+              text, count = card_pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
+              changed += count
+
+          if changed != len(mapping):
+              raise SystemExit(f'Foram sincronizados {changed} de {len(mapping)} titulos; abortando para nao alterar parcialmente o painel.')
+
+          p.write_text(text, encoding='utf-8')
+          print(f'Titulos sincronizados com sucesso: {changed}')
+          PY
+
       - name: Validar
         run: |
           python - <<'PY'
@@ -79,7 +127,16 @@ jobs:
           assert re.search(r'<button type="button" class="[^"]*ev-thumb[^"]*"[^>]*data-modal-src="' + re.escape(expected) + r'"[^>]*data-drive-link="1"[^>]*>', chunk), 'Atributos do botão incorretos'
           assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk, 'Texto data-drive-link ainda aparece dentro do botão'
           assert 'data-drive-link="1">' not in re.sub(r'<button[^>]*>', '', chunk), 'Atributo fora da tag do botão'
-          print('Validação OK: botão FOTOS com link do Drive e estrutura correta.')
+
+          expected_titles = [
+              'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
+              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Missões de Fiscalização',
+              'Formação de Brigadistas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','BM FEM Capacitadas',
+              'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração'
+          ]
+          for title in expected_titles:
+              assert f'<div class="kpi-label">{title}</div>' in html, f'Titulo KPI ausente: {title}'
+          print('Validação OK: evidencias e titulos da Visão Geral conferidos.')
           PY
 
       - name: Commit e sincronizar
@@ -91,7 +148,11 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: reconstruir botao fotos missoes'
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          git commit -m 'fix: sincronizar titulos da visao geral'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
