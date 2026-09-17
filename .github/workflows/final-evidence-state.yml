@@ -116,3 +116,5 @@ jobs:
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
+
+      # Links canônicos dos cards de fiscalização — não alterar para outros documentos.
