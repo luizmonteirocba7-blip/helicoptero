@@ -37,7 +37,6 @@ jobs:
 
           photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
 
-          # Substitui o botão FOTOS inteiro, preservando o padrão usado pelos cards que já funcionam.
           button_pattern = re.compile(r'<button type="button" class="ev-thumb[^>]*>.*?</button>', re.S)
           replacement = (
               '<button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 '
@@ -61,7 +60,7 @@ jobs:
           print('Botão FOTOS de Missões de Fiscalização reconstruído corretamente.')
           PY
 
-      - name: Sincronizar titulos da Visão Geral com a Central de Comprovações
+      - name: Sincronizar títulos oficiais da Visão Geral com a Central de Comprovações
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -70,43 +69,52 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
-          mapping = {
-              'Infrações Administrativas': 'Infrações Administrativas',
-              'Perícia de Incêndios': 'Perícia de Incêndios',
-              'Prevenção e Combate': 'Prevenção e Combate',
-              'Aeronave Remotamente Pilotada': 'Drone (RPAS)',
-              'Fogo Técnico': 'Fogo Técnico',
-              'Campanhas': 'Campanhas',
-              'Semana de Prevenção': 'Semana de Prevenção',
-              'Missões de Combate': 'Missões de Combate',
-              'Operações de Fiscalização': 'Operações de Fiscalização',
-              'Missões de Fiscalização': 'Missões de Fiscalização',
-              'Capacitação de Brigadistas': 'Formação de Brigadistas',
-              'Brigada Municipal Mista': 'Brigada Municipal Mista',
-              'Publicações': 'Publicações Matérias',
-              'Focos de Calor': 'Focos de Calor',
-              'BM FEM Capacitadas': 'BM FEM Capacitadas',
-              'Op órgãos federais': 'OP Órgãos Federais',
-              'Op de Combate': 'OP Combate (Parceria)',
-              'Eventos Integrados': 'Eventos Integrados',
-              'Área Monitorada': 'Área Monitorada',
-              'Autos de Infração': 'Autos de Infração',
-          }
+          courses = [
+              ('Infrações Administrativas', 'Curso de Infrações Administrativas', '<!-- 1. Infrações Administrativas -->', '<!-- 2. Perícia de Incêndios -->'),
+              ('Perícia de Incêndios', 'Curso de Perícia de Incêndios Florestais', '<!-- 2. Perícia de Incêndios -->', '<!-- 3. Prevenção e Combate -->'),
+              ('Prevenção e Combate', 'Curso de Prevenção e Combate a Incêndios Florestais', '<!-- 3. Prevenção e Combate -->', '<!-- 4. Aeronave Remotamente Pilotada -->'),
+              ('Aeronave Remotamente Pilotada', 'Curso de Aeronave Remotamente Pilotada', '<!-- 4. Aeronave Remotamente Pilotada -->', '<!-- 5. Fogo Técnico -->'),
+              ('Fogo Técnico', 'Curso de Fogo Técnico', '<!-- 5. Fogo Técnico -->', '<!-- 6. Campanhas -->'),
+              ('Semana de Prevenção', 'Semana de Prevenção e Preparação para Incêndios Florestais', '<!-- 7. Semana de Prevenção -->', '<!-- 8. Missões de Combate -->'),
+          ]
 
-          changed = 0
-          for metric, title in mapping.items():
+          # Indicadores de Desempenho: mantém os nomes oficiais.
+          for metric, title, _, _ in courses:
               card_pattern = re.compile(
                   r'(<button[^>]*class="[^"]*\\bkpi-card\\b[^"]*"[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
                   re.S|re.I
               )
               text, count = card_pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
-              changed += count
+              if count != 1:
+                  raise SystemExit(f'Indicador não encontrado: {metric}')
 
-          if changed != len(mapping):
-              raise SystemExit(f'Foram sincronizados {changed} de {len(mapping)} titulos; abortando para nao alterar parcialmente o painel.')
+          # Central de Comprovações: os títulos precisam ser idênticos aos Indicadores.
+          evidence_start = text.find('<section id="evidencias"')
+          evidence_end = text.find('</section>', evidence_start)
+          if evidence_start < 0 or evidence_end < 0:
+              raise SystemExit('Central de Comprovações não encontrada')
+          evidence = text[evidence_start:evidence_end]
 
+          for metric, title, marker, next_marker in courses:
+              start = evidence.find(marker)
+              end = evidence.find(next_marker, start)
+              if start < 0 or end < 0:
+                  raise SystemExit(f'Card de evidência não encontrado: {metric}')
+              chunk = evidence[start:end]
+              chunk, count = re.subn(
+                  r'(<h4[^>]*class="[^"]*text-white[^"]*"[^>]*>)(.*?)(</h4>)',
+                  lambda m: m.group(1) + title + m.group(3),
+                  chunk,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit(f'Título de evidência não encontrado: {metric}')
+              evidence = evidence[:start] + chunk + evidence[end:]
+
+          text = text[:evidence_start] + evidence + text[evidence_end:]
           p.write_text(text, encoding='utf-8')
-          print(f'Titulos sincronizados com sucesso: {changed}')
+          print('Seis títulos oficiais sincronizados em Indicadores e Central de Comprovações.')
           PY
 
       - name: Validar
@@ -128,15 +136,17 @@ jobs:
           assert 'data-drive-link="1">\n                <i class="fa-solid fa-camera"></i> Fotos' not in chunk, 'Texto data-drive-link ainda aparece dentro do botão'
           assert 'data-drive-link="1">' not in re.sub(r'<button[^>]*>', '', chunk), 'Atributo fora da tag do botão'
 
-          expected_titles = [
-              'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
-              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Missões de Fiscalização',
-              'Formação de Brigadistas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','BM FEM Capacitadas',
-              'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração'
+          expected_courses = [
+              'Curso de Infrações Administrativas',
+              'Curso de Perícia de Incêndios Florestais',
+              'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Curso de Aeronave Remotamente Pilotada',
+              'Curso de Fogo Técnico',
+              'Semana de Prevenção e Preparação para Incêndios Florestais',
           ]
-          for title in expected_titles:
-              assert f'<div class="kpi-label">{title}</div>' in html, f'Titulo KPI ausente: {title}'
-          print('Validação OK: evidencias e titulos da Visão Geral conferidos.')
+          for title in expected_courses:
+              assert html.count(title) >= 2, f'Título oficial não encontrado duas vezes: {title}'
+          print('Validação OK: títulos oficiais conferidos em Indicadores e Central de Comprovações.')
           PY
 
       - name: Commit e sincronizar
@@ -148,7 +158,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: sincronizar titulos da visao geral'
+          git commit -m 'fix: manter titulos oficiais nos indicadores e comprovacoes'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
