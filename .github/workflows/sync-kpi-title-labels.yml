@@ -1,0 +1,104 @@
+name: Sync KPI titles with evidence cards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/sync-kpi-title-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.event.head_commit.message != 'chore: sync KPI titles'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sincronizar titulos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          evidence_start = text.find('<section id="evidencias"')
+          if evidence_start < 0:
+              raise SystemExit('Secao de evidencias nao encontrada')
+          evidence_end = text.find('</section>', evidence_start)
+          if evidence_end < 0:
+              raise SystemExit('Fim da secao de evidencias nao encontrado')
+
+          evidence = text[evidence_start:evidence_end]
+          evidence_titles = re.findall(
+              r'<h4[^>]*class="[^"]*text-white[^"]*"[^>]*>(.*?)</h4>',
+              evidence,
+              flags=re.S|re.I
+          )
+
+          # Os dois primeiros cards de evidencias sao os cards de contratacao.
+          evidence_titles = [re.sub(r'\\s+', ' ', re.sub(r'<[^>]+>', '', t)).strip() for t in evidence_titles]
+          kpi_titles = evidence_titles[2:22]
+
+          if len(kpi_titles) != 20:
+              raise SystemExit(f'Esperados 20 titulos de indicadores; encontrados {len(kpi_titles)}')
+
+          pattern = re.compile(
+              r'(<div[^>]*class="[^"]*kpi-card[^"]*"[^>]*>.*?<[^>]*class="kpi-label"[^>]*>)(.*?)(</[^>]+>)',
+              flags=re.S|re.I
+          )
+
+          match_count = 0
+          def replace_label(m):
+              global match_count
+              idx = replace_label.counter
+              replace_label.counter += 1
+              if idx >= len(kpi_titles):
+                  return m.group(0)
+              return m.group(1) + kpi_titles[idx] + m.group(3)
+          replace_label.counter = 0
+
+          new_text, count = pattern.subn(replace_label, text)
+          if count < 20:
+              raise SystemExit(f'Foram encontrados apenas {count} cards KPI; nada foi publicado')
+
+          p.write_text(new_text, encoding='utf-8')
+          print('Titulos KPI sincronizados:', count)
+          print('Titulos usados:', ' | '.join(kpi_titles))
+          PY
+
+      - name: Validar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert '<html' in html and '</html>' in html
+          assert html.count('class="kpi-label"') >= 20
+          assert 'Central de Comprovações' in html
+          print('HTML validado')
+          PY
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteracao necessaria.'
+            exit 0
+          fi
+          git commit -m 'chore: sync KPI titles'
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
