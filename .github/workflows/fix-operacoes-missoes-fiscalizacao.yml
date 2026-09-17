@@ -65,7 +65,6 @@ jobs:
           chunk = set_attr(chunk, 'data-pdf-src', PDF)
           chunk = set_attr(chunk, 'data-modal-src', FOTO)
 
-          # Marca explicitamente o botão de foto como link externo do Drive.
           button_pattern = r'(<button\b[^>]*data-modal-src="[^"]*")(?=>)'
           if 'data-drive-link=' in chunk:
               chunk = re.sub(r'data-drive-link="[^"]*"', 'data-drive-link="1"', chunk, count=1)
@@ -75,12 +74,59 @@ jobs:
                   raise SystemExit('Botão FOTOS de Missões de Fiscalização não encontrado.')
 
           text = text[:start] + chunk + text[end:]
-
           p.write_text(text, encoding='utf-8')
           print('Cards corrigidos: Operações sem evidências; Missões com PDF e fotos + link externo.')
           PY
 
-      - name: Validar estado final dos cards
+      - name: Sincronizar títulos da Visão Geral com a Central de Comprovações
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+
+          mapping = {
+              'Infrações Administrativas': 'Infrações Administrativas',
+              'Perícia de Incêndios': 'Perícia de Incêndios',
+              'Prevenção e Combate': 'Prevenção e Combate',
+              'Aeronave Remotamente Pilotada': 'Drone (RPAS)',
+              'Fogo Técnico': 'Fogo Técnico',
+              'Campanhas': 'Campanhas',
+              'Semana de Prevenção': 'Semana de Prevenção',
+              'Missões de Combate': 'Missões de Combate',
+              'Operações de Fiscalização': 'Operações de Fiscalização',
+              'Missões de Fiscalização': 'Missões de Fiscalização',
+              'Capacitação de Brigadistas': 'Formação de Brigadistas',
+              'Brigada Municipal Mista': 'Brigada Municipal Mista',
+              'Publicações': 'Publicações Matérias',
+              'Focos de Calor': 'Focos de Calor',
+              'BM FEM Capacitadas': 'BM FEM Capacitadas',
+              'Op órgãos federais': 'OP Órgãos Federais',
+              'Op de Combate': 'OP Combate (Parceria)',
+              'Eventos Integrados': 'Eventos Integrados',
+              'Área Monitorada': 'Área Monitorada',
+              'Autos de Infração': 'Autos de Infração',
+          }
+
+          changed = 0
+          for metric, title in mapping.items():
+              card_pattern = re.compile(
+                  r'(<button[^>]*class="[^"]*\\bkpi-card\\b[^"]*"[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  re.S|re.I
+              )
+              text, count = card_pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
+              changed += count
+
+          if changed != len(mapping):
+              raise SystemExit(f'Foram sincronizados {changed} de {len(mapping)} títulos; abortando para não alterar parcialmente o painel.')
+
+          p.write_text(text, encoding='utf-8')
+          print(f'Títulos sincronizados com sucesso: {changed}')
+          PY
+
+      - name: Validar estado final dos cards e títulos
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -107,7 +153,16 @@ jobs:
           assert '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' in mis
           assert 'data-drive-link="1"' in mis
 
-          print('Validação OK: os dois cards estão separados e o botão FOTOS da Missões está como link externo.')
+          expected_titles = [
+              'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
+              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Missões de Fiscalização',
+              'Formação de Brigadistas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','BM FEM Capacitadas',
+              'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração'
+          ]
+          for title in expected_titles:
+              assert f'<div class="kpi-label">{title}</div>' in html, f'Título ausente: {title}'
+
+          print('Validação OK: cards e títulos sincronizados com a Central de Comprovações.')
           PY
 
       - name: Commit e sincronizar
@@ -119,7 +174,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: habilitar link externo da foto de missoes'
+          git commit -m 'fix: sincronizar titulos da visao geral'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
