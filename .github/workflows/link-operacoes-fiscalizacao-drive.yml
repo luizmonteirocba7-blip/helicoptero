@@ -46,11 +46,46 @@ jobs:
           print('Operações de Fiscalização: links canônicos e card completo aplicados.')
           PY
 
+      - name: Alinhar títulos dos cursos nos indicadores
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          start = html.find('<section id="indicadores"')
+          end = html.find('</section>', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Seção de indicadores não encontrada.')
+          end += len('</section>')
+          chunk = html[start:end]
+
+          replacements = {
+              'Infrações Administrativas': 'Curso de Infrações Administrativas',
+              'Perícia de Incêndios': 'Curso de Perícia de Incêndios Florestais',
+              'Prevenção e Combate': 'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Drone (RPAS)': 'Curso de Aeronave Remotamente Pilotada',
+              'Fogo Técnico': 'Curso de Fogo Técnico',
+          }
+
+          for old, new in replacements.items():
+              pattern = rf'(<div class="kpi-label">){re.escape(old)}(</div>)'
+              chunk, count = re.subn(pattern, rf'\g<1>{new}\g<2>', chunk, count=1)
+              if count != 1 and f'<div class="kpi-label">{new}</div>' not in chunk:
+                  raise SystemExit(f'Título não encontrado: {old}')
+
+          html = html[:start] + chunk + html[end:]
+          p.write_text(html, encoding='utf-8')
+          print('Títulos dos cursos alinhados com os cards de comprovação.')
+          PY
+
       - name: Validar
         run: |
           python - <<'PY'
           from pathlib import Path
           html = Path('index.html').read_text(encoding='utf-8')
+
           start = html.find('<!-- 9. Operações de Fiscalização -->')
           end = html.find('<!-- 10. Missões de Fiscalização -->', start)
           block = html[start:end]
@@ -58,7 +93,29 @@ jobs:
           assert '1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le' in block
           assert '14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa' in block
           assert 'data-drive-link="1"' in block
-          print('Validação OK.')
+
+          start = html.find('<section id="indicadores"')
+          end = html.find('</section>', start) + len('</section>')
+          indicadores = html[start:end]
+          for title in [
+              'Curso de Infrações Administrativas',
+              'Curso de Perícia de Incêndios Florestais',
+              'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Curso de Aeronave Remotamente Pilotada',
+              'Curso de Fogo Técnico',
+          ]:
+              assert f'<div class="kpi-label">{title}</div>' in indicadores, title
+
+          for metric in [
+              'Infrações Administrativas',
+              'Perícia de Incêndios',
+              'Prevenção e Combate',
+              'Aeronave Remotamente Pilotada',
+              'Fogo Técnico',
+          ]:
+              assert f'data-metric="{metric}"' in indicadores, metric
+
+          print('Validação OK: fiscalizacao + títulos dos cursos.')
           PY
 
       - name: Commit e sincronizar
@@ -70,7 +127,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: vincular evidencias canonicas de operacoes de fiscalizacao'
+          git commit -m 'fix: alinhar titulos dos cursos nos indicadores'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
