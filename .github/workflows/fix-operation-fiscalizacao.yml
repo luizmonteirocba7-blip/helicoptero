@@ -1,0 +1,51 @@
+name: Fix evidências Operações de Fiscalização
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-operation-fiscalizacao.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar PDF e Fotos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          start = text.find('<!-- 9. Operações de Fiscalização -->')
+          end = text.find('<!-- 10. Missões de Fiscalização -->', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Card de Operações de Fiscalização não encontrado')
+          block = text[start:end]
+          block = block.replace('class="evidence-card-missing', 'class="evidence-card-complete', 1)
+          block = re.sub(r'data-pdf-src="[^"]*"', 'data-pdf-src="https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link"', block, count=1)
+          block = re.sub(r'data-modal-src="[^"]*"', 'data-modal-src="https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link" data-drive-link="1"', block, count=1)
+          text = text[:start] + block + text[end:]
+          p.write_text(text, encoding='utf-8')
+          check = p.read_text(encoding='utf-8')
+          assert '1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le' in check
+          assert '14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa' in check
+          print('Evidências atualizadas.')
+          PY
+
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'fix: adicionar PDF e fotos da operacao de fiscalizacao'
+          git push origin HEAD:main
