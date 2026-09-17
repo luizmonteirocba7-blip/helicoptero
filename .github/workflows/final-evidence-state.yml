@@ -97,10 +97,12 @@ jobs:
           assert 'evidence-card-complete' in op
           assert op_pdf in op
           assert op_photo in op
-          assert 'data-drive-link="1"' in op
+          assert op.count('data-drive-link="1"') == 1
           assert mi_pdf in mi
           assert mi_photo in mi
-          assert 'data-drive-link="1"' in mi
+          assert mi.count('data-drive-link="1"') == 1
+          assert 'data-pdf-src=""' not in op
+          assert 'Aguardando+Fotos' not in op
           print('Estado final validado.')
 
       - name: Commit e sincronizar
