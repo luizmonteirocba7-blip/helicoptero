@@ -71,6 +71,26 @@ jobs:
                   raise SystemExit(f'Título de evidência não encontrado: {metric}')
               evidence = evidence[:start] + chunk + evidence[end:]
 
+          # Semana de Prevenção: o título oficial também precisa aparecer na Central.
+          week_title = 'Semana de Prevenção e Preparação para Incêndios Florestais'
+          week_marker = '<!-- 7. Semana de Prevenção -->'
+          week_next_marker = '<!-- 8. Missões de Combate -->'
+          week_start = evidence.find(week_marker)
+          week_end = evidence.find(week_next_marker, week_start)
+          if week_start < 0 or week_end < 0:
+              raise SystemExit('Card de evidência da Semana de Prevenção não encontrado')
+          week_chunk = evidence[week_start:week_end]
+          week_chunk, week_count = re.subn(
+              r'(<h4[^>]*>)(.*?)(</h4>)',
+              lambda m: m.group(1) + week_title + m.group(3),
+              week_chunk,
+              count=1,
+              flags=re.S,
+          )
+          if week_count != 1:
+              raise SystemExit('Título da Semana de Prevenção não encontrado na Central')
+          evidence = evidence[:week_start] + week_chunk + evidence[week_end:]
+
           text = text[:evidence_start] + evidence + text[evidence_end:]
 
           # 2) Indicadores de Desempenho: mostra os mesmos cinco nomes oficiais.
@@ -90,7 +110,7 @@ jobs:
 
           # Demais títulos detalhados conforme o documento, sem alterar data-metric.
           other_titles = {
-              'Semana de Prevenção': 'Semana de Prevenção e Preparação para Incêndios Florestais',
+              'Semana de Prevenção': week_title,
               'Missões de Combate': 'Missões de Combate a Incêndios Florestais e Queimada Não Autorizada',
               'Missões de Fiscalização': 'Missões de Fiscalização (Propriedades Fiscalizadas)',
               'Capacitação de Brigadistas': 'Capacitação de Brigadistas',
@@ -113,7 +133,7 @@ jobs:
               text = text.replace('<head>', '<head>\n' + marker, 1)
 
           p.write_text(text, encoding='utf-8')
-          print('Nomes oficiais dos cursos sincronizados entre Indicadores e Central de Comprovações.')
+          print('Nomes oficiais sincronizados entre Indicadores e Central de Comprovações.')
           PY
 
       - name: Validar
@@ -127,6 +147,7 @@ jobs:
               'Curso de Prevenção e Combate a Incêndios Florestais',
               'Curso de Aeronave Remotamente Pilotada',
               'Curso de Fogo Técnico',
+              'Semana de Prevenção e Preparação para Incêndios Florestais',
           ]
           for title in required:
               assert html.count(title) >= 2, title
@@ -147,7 +168,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: alinhar titulos de cursos e indicadores'
+          git commit -m 'fix: alinhar titulos de cursos e semana na central'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
