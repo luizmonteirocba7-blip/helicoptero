@@ -1,0 +1,79 @@
+name: Atualizar PDF de Eventos Integrados
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Atualizar somente o PDF de Eventos Integrados
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          marker = '<!-- 18. Eventos Integrados -->'
+          next_marker = '<!-- 19. Área Monitorada -->'
+          start = html.find(marker)
+          end = html.find(next_marker, start)
+
+          if start < 0 or end < 0:
+              raise SystemExit('Card de Eventos Integrados não encontrado.')
+
+          block = html[start:end]
+          pdf = 'https://drive.google.com/file/d/1b7WfdcM2jNv6gn8TDMbZzEKRo4h1pXRT/view?usp=drive_link'
+
+          updated, count = re.subn(
+              r'data-pdf-src="[^"]*"',
+              f'data-pdf-src="{pdf}"',
+              block,
+              count=1,
+          )
+
+          if count != 1:
+              raise SystemExit('Campo PDF de Eventos Integrados não encontrado.')
+
+          html = html[:start] + updated + html[end:]
+          path.write_text(html, encoding='utf-8')
+          print('PDF de Eventos Integrados atualizado.')
+
+      - name: Validar
+        shell: python
+        run: |
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          start = html.find('<!-- 18. Eventos Integrados -->')
+          end = html.find('<!-- 19. Área Monitorada -->', start)
+          block = html[start:end]
+          expected = '1b7WfdcM2jNv6gn8TDMbZzEKRo4h1pXRT'
+          assert expected in block, 'Novo PDF não encontrado no card correto.'
+          assert 'data-pdf-src="https://drive.google.com/file/d/1b7WfdcM2jNv6gn8TDMbZzEKRo4h1pXRT/view?usp=drive_link"' in block
+          print('Validação OK: apenas o PDF de Eventos Integrados foi atualizado.')
+
+      - name: Commit e sincronizar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: atualizar pdf de eventos integrados'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
