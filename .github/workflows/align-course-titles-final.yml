@@ -1,0 +1,123 @@
+name: Alinhar nomes oficiais dos cursos
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/align-course-titles-final.yml'
+      - '.github/workflows/.trigger-course-titles-final'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ajustar somente os cinco cursos
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          courses = [
+              ('Infrações Administrativas', 'Curso de Infrações Administrativas'),
+              ('Perícia de Incêndios', 'Curso de Perícia de Incêndios Florestais'),
+              ('Prevenção e Combate', 'Curso de Prevenção e Combate a Incêndios Florestais'),
+              ('Aeronave Remotamente Pilotada', 'Curso de Aeronave Remotamente Pilotada'),
+              ('Fogo Técnico', 'Curso de Fogo Técnico'),
+          ]
+
+          # Central de Comprovações: altera somente os cinco cards dos cursos.
+          evidence_start = html.find('<section id="evidencias"')
+          evidence_end = html.find('</section>', evidence_start)
+          if evidence_start < 0 or evidence_end < 0:
+              raise SystemExit('Central de Comprovações não encontrada')
+          evidence = html[evidence_start:evidence_end]
+
+          markers = [
+              '<!-- 1. Infrações Administrativas -->',
+              '<!-- 2. Perícia de Incêndios -->',
+              '<!-- 3. Prevenção e Combate -->',
+              '<!-- 4. Aeronave Remotamente Pilotada -->',
+              '<!-- 5. Fogo Técnico -->',
+          ]
+          next_markers = markers[1:] + ['<!-- 6. Campanhas -->']
+
+          for (metric, title), marker, next_marker in zip(courses, markers, next_markers):
+              start = evidence.find(marker)
+              end = evidence.find(next_marker, start)
+              if start < 0 or end < 0:
+                  raise SystemExit(f'Card de evidência não encontrado: {metric}')
+              chunk = evidence[start:end]
+              chunk, count = re.subn(
+                  r'(<h4[^>]*class="[^"]*text-white[^"]*"[^>]*>)(.*?)(</h4>)',
+                  lambda m: m.group(1) + title + m.group(3),
+                  chunk,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit(f'Título de evidência não encontrado: {metric}')
+              evidence = evidence[:start] + chunk + evidence[end:]
+
+          html = html[:evidence_start] + evidence + html[evidence_end:]
+
+          # Indicadores de Desempenho: altera somente o texto visível (.kpi-label).
+          for metric, title in courses:
+              pattern = re.compile(
+                  r'(<button[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  flags=re.S,
+              )
+              html, count = pattern.subn(lambda m: m.group(1) + title + m.group(3), html, count=1)
+              if count != 1:
+                  raise SystemExit(f'Indicador não encontrado: {metric}')
+
+          # Garante que os vínculos internos usados pelo Google Sheets continuem intactos.
+          for metric, title in courses:
+              assert f'data-metric="{metric}"' in html
+              assert html.count(title) >= 2, title
+
+          path.write_text(html, encoding='utf-8')
+          print('Cinco títulos de cursos alinhados em Indicadores e Central de Comprovações.')
+
+      - name: Validar resultado
+        shell: python
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          expected = [
+              'Curso de Infrações Administrativas',
+              'Curso de Perícia de Incêndios Florestais',
+              'Curso de Prevenção e Combate a Incêndios Florestais',
+              'Curso de Aeronave Remotamente Pilotada',
+              'Curso de Fogo Técnico',
+          ]
+          for title in expected:
+              assert html.count(title) >= 2, title
+          print('Validação OK.')
+          PY
+
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git commit -m 'fix: alinhar titulos dos cursos nos indicadores e comprovacoes'
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
