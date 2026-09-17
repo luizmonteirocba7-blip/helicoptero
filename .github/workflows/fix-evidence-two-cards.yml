@@ -31,10 +31,12 @@ jobs:
               'Autos de Infração': {
                   'pdf': 'https://drive.google.com/file/d/1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt/view?usp=drive_link',
                   'foto': 'https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link',
+                  'complete': True,
               },
               'Operações de Fiscalização': {
-                  'pdf': 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link',
-                  'foto': 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link',
+                  'pdf': 'https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link',
+                  'foto': 'https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link',
+                  'complete': True,
               },
           }
 
@@ -44,39 +46,45 @@ jobs:
               if pos == -1:
                   raise SystemExit(f'Card nao encontrado: {title}')
 
-              end = text.find('</div>', pos)
-              if end == -1:
-                  raise SystemExit(f'Fim do card nao encontrado: {title}')
-
               start_card = text.rfind('<div class="evidence-card', 0, pos)
               next_card = text.find('<div class="evidence-card', pos + len(marker))
               card_end = next_card if next_card != -1 else len(text)
+              if start_card == -1:
+                  raise SystemExit(f'Inicio do card nao encontrado: {title}')
               chunk = text[start_card:card_end]
 
-              pdf_pat = re.compile(r'(data-pdf-src=")[^"]*(")')
-              foto_pat = re.compile(r'(data-modal-src=")[^"]*(")')
+              chunk = re.sub(r'evidence-card-(?:complete|missing)', 'evidence-card-complete', chunk, count=1)
+              chunk, n1 = re.subn(r'data-pdf-src="[^"]*"', f'data-pdf-src="{links["pdf"]}"', chunk, count=1)
+              chunk, n2 = re.subn(r'data-modal-src="[^"]*"', f'data-modal-src="{links["foto"]}" data-drive-link="1"', chunk, count=1)
+              if n1 != 1 or n2 != 1:
+                  raise SystemExit(f'Campos não encontrados em {title}: pdf={n1}, foto={n2}')
 
-              chunk2, n1 = pdf_pat.subn(r'\g<1>' + links['pdf'] + r'\g<2>', chunk, count=1)
-              chunk3, n2 = foto_pat.subn(r'\g<1>' + links['foto'] + r'\g<2>', chunk2, count=1)
-
-              if n1 != 1:
-                  raise SystemExit(f'Campo PDF nao encontrado/duplicado: {title}')
-              if n2 != 1:
-                  raise SystemExit(f'Campo FOTO nao encontrado/duplicado: {title}')
-
-              text = text[:start_card] + chunk3 + text[card_end:]
+              text = text[:start_card] + chunk + text[card_end:]
 
           p.write_text(text, encoding='utf-8')
-          print('Links atualizados com sucesso.')
+          print('Links e estados dos cards de Operações e Autos atualizados.')
           PY
 
       - name: Validar
         run: |
-          grep -q '1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt' index.html
-          grep -q '1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5' index.html
-          grep -q '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K' index.html
-          grep -q '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4' index.html
-          echo 'Validacao OK.'
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          checks = [
+            '1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt',
+            '1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5',
+            '1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le',
+            '14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa',
+          ]
+          for value in checks:
+              assert value in html, value
+          op_start = html.find('<!-- 9. Operações de Fiscalização -->')
+          op_end = html.find('<!-- 10. Missões de Fiscalização -->', op_start)
+          op = html[op_start:op_end]
+          assert 'evidence-card-complete' in op
+          assert 'data-drive-link="1"' in op
+          print('Validacao OK.')
+          PY
 
       - name: Commit e sincronizar
         run: |
@@ -87,7 +95,7 @@ jobs:
             echo 'Nenhuma alteracao necessaria.'
             exit 0
           fi
-          git commit -m 'fix: vincular evidencias de fiscalizacao e autos'
+          git commit -m 'fix: vincular evidencias canonicas de fiscalizacao e autos'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
