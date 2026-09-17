@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ajustar somente os cinco cursos
+      - name: Alinhar títulos oficiais na Central de Comprovações
         shell: python
         run: |
           from pathlib import Path
@@ -36,9 +36,10 @@ jobs:
               ('Prevenção e Combate', 'Curso de Prevenção e Combate a Incêndios Florestais'),
               ('Aeronave Remotamente Pilotada', 'Curso de Aeronave Remotamente Pilotada'),
               ('Fogo Técnico', 'Curso de Fogo Técnico'),
+              ('Semana de Prevenção', 'Semana de Prevenção e Preparação para Incêndios Florestais'),
           ]
 
-          # Central de Comprovações: altera somente os cinco cards dos cursos.
+          # Central de Comprovações: ajusta somente os títulos dos seis cards alinhados aos indicadores.
           evidence_start = html.find('<section id="evidencias"')
           evidence_end = html.find('</section>', evidence_start)
           if evidence_start < 0 or evidence_end < 0:
@@ -51,8 +52,9 @@ jobs:
               '<!-- 3. Prevenção e Combate -->',
               '<!-- 4. Aeronave Remotamente Pilotada -->',
               '<!-- 5. Fogo Técnico -->',
+              '<!-- 7. Semana de Prevenção -->',
           ]
-          next_markers = markers[1:] + ['<!-- 6. Campanhas -->']
+          next_markers = markers[1:] + ['<!-- 8. Missões de Combate -->']
 
           for (metric, title), marker, next_marker in zip(courses, markers, next_markers):
               start = evidence.find(marker)
@@ -73,7 +75,7 @@ jobs:
 
           html = html[:evidence_start] + evidence + html[evidence_end:]
 
-          # Indicadores de Desempenho: altera somente o texto visível (.kpi-label).
+          # Mantém os nomes visíveis dos indicadores alinhados.
           for metric, title in courses:
               pattern = re.compile(
                   r'(<button[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
@@ -83,13 +85,12 @@ jobs:
               if count != 1:
                   raise SystemExit(f'Indicador não encontrado: {metric}')
 
-          # Garante que os vínculos internos usados pelo Google Sheets continuem intactos.
           for metric, title in courses:
               assert f'data-metric="{metric}"' in html
               assert html.count(title) >= 2, title
 
           path.write_text(html, encoding='utf-8')
-          print('Cinco títulos de cursos alinhados em Indicadores e Central de Comprovações.')
+          print('Títulos alinhados em Indicadores e Central de Comprovações.')
 
       - name: Validar resultado
         shell: python
@@ -103,10 +104,11 @@ jobs:
               'Curso de Prevenção e Combate a Incêndios Florestais',
               'Curso de Aeronave Remotamente Pilotada',
               'Curso de Fogo Técnico',
+              'Semana de Prevenção e Preparação para Incêndios Florestais',
           ]
           for title in expected:
               assert html.count(title) >= 2, title
-          print('Validação OK.')
+          print('Validação OK: títulos visíveis alinhados em Indicadores e Comprovações.')
           PY
 
       - name: Commit
@@ -118,7 +120,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'fix: alinhar titulos dos cursos nos indicadores e comprovacoes'
+          git commit -m 'fix: alinhar titulos na central de comprovacoes'
           git fetch origin main
           git rebase origin/main
           git push origin HEAD:main
