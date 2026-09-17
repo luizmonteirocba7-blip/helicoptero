@@ -26,7 +26,7 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
-          def update_card(text, marker, pdf, photo):
+          def update_card(text, marker, pdf, photo, drive_photo=False):
               start = text.find(marker)
               if start < 0:
                   raise SystemExit(f'Card nao encontrado: {marker}')
@@ -40,10 +40,13 @@ jobs:
                   raise SystemExit(f'Campo PDF nao encontrado em {marker}')
               chunk = chunk2
 
-              chunk2 = re.sub(r'data-modal-src="[^"]*"', f'data-modal-src="{photo}"', chunk, count=1)
+              chunk2 = re.sub(r'data-modal-src="[^"]*"(?: data-drive-link="[^"]*")?', f'data-modal-src="{photo}"' + (' data-drive-link="1"' if drive_photo else ''), chunk, count=1)
               if chunk2 == chunk:
                   raise SystemExit(f'Campo de fotos nao encontrado em {marker}')
               chunk = chunk2
+
+              if drive_photo and 'data-drive-link="1"' not in chunk:
+                  raise SystemExit(f'data-drive-link nao aplicado em {marker}')
 
               return text[:start] + chunk + text[end:]
 
@@ -52,15 +55,17 @@ jobs:
               text,
               '<!-- 20. Autos de Infração -->',
               'https://drive.google.com/file/d/1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt/view?usp=drive_link',
-              'https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link'
+              'https://drive.google.com/file/d/1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5/view?usp=drive_link',
+              True
           )
 
           # Operações de Fiscalização
           text = update_card(
               text,
               '<!-- 9. Operações de Fiscalização -->',
-              'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link',
-              'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
+              'https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link',
+              'https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link',
+              True
           )
 
           p.write_text(text, encoding='utf-8')
@@ -75,11 +80,12 @@ jobs:
           checks = [
             '1ceVWI4NaH36cjWq7hxKlc1cNeM7e-JFt',
             '1YfTwGUAlGAT4kfdsP7EbYJ-4KdHktHU5',
-            '1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K',
-            '1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4',
+            '1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le',
+            '14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa',
           ]
           for value in checks:
               assert value in html, value
+          assert 'data-modal-src="https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link" data-drive-link="1"' in html
           print('Validacao OK: os quatro links estao no index.html.')
           PY
 
