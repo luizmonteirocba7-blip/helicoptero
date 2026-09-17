@@ -113,7 +113,7 @@ jobs:
           changed = 0
           for metric, title in mapping.items():
               card_pattern = re.compile(
-                  r'(<button[^>]*class="[^"]*\\bkpi-card\\b[^"]*"[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  r'(<button[^>]*class="[^"]*\bkpi-card\b[^"]*"[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
                   re.S|re.I
               )
               text, count = card_pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
@@ -168,13 +168,17 @@ jobs:
       - name: Commit e sincronizar
         run: |
           git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.email '41898282+users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
           git commit -m 'fix: sincronizar titulos da visao geral'
-          git fetch origin main
-          git rebase origin/main
-          git push origin HEAD:main
+          for i in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
