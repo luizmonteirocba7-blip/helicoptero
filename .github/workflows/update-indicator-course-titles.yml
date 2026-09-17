@@ -1,3 +1,4 @@
+# Sincronização dos títulos dos cursos com os cards de comprovação
 name: Alinhar títulos dos cursos nos indicadores
 
 on:
@@ -46,9 +47,8 @@ jobs:
           for old, new in replacements.items():
               pattern = rf'(<div class="kpi-label">){re.escape(old)}(</div>)'
               chunk, count = re.subn(pattern, rf'\g<1>{new}\g<2>', chunk, count=1)
-              if count != 1:
-                  if f'<div class="kpi-label">{new}</div>' not in chunk:
-                      raise SystemExit(f'Título não encontrado: {old}')
+              if count != 1 and f'<div class="kpi-label">{new}</div>' not in chunk:
+                  raise SystemExit(f'Título não encontrado: {old}')
 
           html = html[:start] + chunk + html[end:]
           path.write_text(html, encoding='utf-8')
