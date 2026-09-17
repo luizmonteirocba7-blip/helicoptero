@@ -3,6 +3,9 @@ name: Atualizar títulos dos indicadores
 on:
   push:
     branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/sync-dashboard-titulos.yml'
   workflow_dispatch:
 
 permissions:
@@ -17,7 +20,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Aplicar títulos do documento
+      - name: Aplicar nomes oficiais dos cursos e dos indicadores
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -26,39 +29,91 @@ jobs:
           p = Path('index.html')
           text = p.read_text(encoding='utf-8')
 
-          replacements = {
+          course_titles = {
               'Infrações Administrativas': 'Curso de Infrações Administrativas',
               'Perícia de Incêndios': 'Curso de Perícia de Incêndios Florestais',
               'Prevenção e Combate': 'Curso de Prevenção e Combate a Incêndios Florestais',
-              'Drone (RPAS)': 'Curso de Aeronave Remotamente Pilotada',
+              'Aeronave Remotamente Pilotada': 'Curso de Aeronave Remotamente Pilotada',
               'Fogo Técnico': 'Curso de Fogo Técnico',
-              'Campanhas': 'Campanhas',
-              'Semana de Prevenção': 'Semana de Prevenção e Preparação para Incêndios Florestais',
-              'Missões de Combate': 'Missões de Combate a Incêndios Florestais e Queimada Não Autorizada',
-              'Operações de Fiscalização': 'Operações de Fiscalização',
-              'Missões de Fiscalização': 'Missões de Fiscalização (Propriedades Fiscalizadas)',
-              'Formação de Brigadistas': 'Capacitação de Brigadistas',
-              'Brigada Municipal Mista': 'Brigada Municipal Mista',
-              'Publicações Matérias': 'Publicações Matérias',
-              'Focos de Calor': 'Foco de Calor',
-              'BM FEM Capacitadas': 'BM FEM Capacitados',
-              'OP Órgãos Federais': 'Operação de Fiscalização com Órgãos Federais',
-              'OP Combate (Parceria)': 'Operação de Combate em Parceria com Outros CBMs',
           }
 
-          # Só altera o texto exibido no card (.kpi-label). O data-metric permanece intacto
-          # para não quebrar a ligação com o Google Sheets.
-          for old, new in replacements.items():
-              pattern = rf'(<div class="kpi-label">)({re.escape(old)})(</div>)'
-              text = re.sub(pattern, rf'\1{new}\3', text, count=1)
+          # 1) Central de Comprovações: os cinco cards de cursos recebem exatamente
+          # os nomes oficiais do documento.
+          evidence_start = text.find('<section id="evidencias"')
+          evidence_end = text.find('</section>', evidence_start)
+          if evidence_start < 0 or evidence_end < 0:
+              raise SystemExit('Central de Comprovações não encontrada')
 
-          # Preserva e explicita os títulos das seções/documentação do PDF.
-          marker = '<!-- TITULOS CONFORME GERAL INDICADOPTRES -->'
+          evidence = text[evidence_start:evidence_end]
+          markers = [
+              '<!-- 1. Infrações Administrativas -->',
+              '<!-- 2. Perícia de Incêndios -->',
+              '<!-- 3. Prevenção e Combate -->',
+              '<!-- 4. Aeronave Remotamente Pilotada -->',
+              '<!-- 5. Fogo Técnico -->',
+          ]
+          next_markers = markers[1:] + ['<!-- 6. Campanhas -->']
+
+          for (metric, title), marker, next_marker in zip(course_titles.items(), markers, next_markers):
+              start = evidence.find(marker)
+              end = evidence.find(next_marker, start)
+              if start < 0 or end < 0:
+                  raise SystemExit(f'Card de evidência não encontrado: {metric}')
+              chunk = evidence[start:end]
+              chunk, count = re.subn(
+                  r'(<h4[^>]*>)(.*?)(</h4>)',
+                  lambda m: m.group(1) + title + m.group(3),
+                  chunk,
+                  count=1,
+                  flags=re.S,
+              )
+              if count != 1:
+                  raise SystemExit(f'Título de evidência não encontrado: {metric}')
+              evidence = evidence[:start] + chunk + evidence[end:]
+
+          text = text[:evidence_start] + evidence + text[evidence_end:]
+
+          # 2) Indicadores de Desempenho: mostra os mesmos cinco nomes oficiais.
+          for metric, title in course_titles.items():
+              pattern = re.compile(
+                  r'(<button[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  flags=re.S,
+              )
+              text, count = pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
+              if count != 1:
+                  raise SystemExit(f'Indicador não encontrado: {metric}')
+
+          # 3) Os data-metric permanecem intactos para preservar o Google Sheets.
+          for metric, title in course_titles.items():
+              assert f'data-metric="{metric}"' in text
+              assert text.count(title) >= 2, title
+
+          # Demais títulos detalhados conforme o documento, sem alterar data-metric.
+          other_titles = {
+              'Semana de Prevenção': 'Semana de Prevenção e Preparação para Incêndios Florestais',
+              'Missões de Combate': 'Missões de Combate a Incêndios Florestais e Queimada Não Autorizada',
+              'Missões de Fiscalização': 'Missões de Fiscalização (Propriedades Fiscalizadas)',
+              'Capacitação de Brigadistas': 'Capacitação de Brigadistas',
+              'Focos de Calor': 'Foco de Calor',
+              'BM FEM Capacitadas': 'BM FEM Capacitados',
+              'Op órgãos federais': 'Operação de Fiscalização com Órgãos Federais',
+              'Op de Combate': 'Operação de Combate em Parceria com Outros CBMs',
+          }
+          for metric, title in other_titles.items():
+              pattern = re.compile(
+                  r'(<button[^>]*data-metric="' + re.escape(metric) + r'"[^>]*>.*?<div class="kpi-label">)(.*?)(</div>)',
+                  flags=re.S,
+              )
+              text, count = pattern.subn(lambda m: m.group(1) + title + m.group(3), text, count=1)
+              if count != 1:
+                  raise SystemExit(f'Indicador não encontrado: {metric}')
+
+          marker = '<!-- TITULOS OFICIAIS DOS CURSOS E INDICADORES -->'
           if marker not in text:
               text = text.replace('<head>', '<head>\n' + marker, 1)
 
           p.write_text(text, encoding='utf-8')
-          print('Títulos atualizados conforme o PDF, mantendo data-metric e integração com Google Sheets.')
+          print('Nomes oficiais dos cursos sincronizados entre Indicadores e Central de Comprovações.')
           PY
 
       - name: Validar
@@ -72,19 +127,14 @@ jobs:
               'Curso de Prevenção e Combate a Incêndios Florestais',
               'Curso de Aeronave Remotamente Pilotada',
               'Curso de Fogo Técnico',
-              'Semana de Prevenção e Preparação para Incêndios Florestais',
-              'Missões de Combate a Incêndios Florestais e Queimada Não Autorizada',
-              'Missões de Fiscalização (Propriedades Fiscalizadas)',
-              'Operação de Fiscalização com Órgãos Federais',
-              'Operação de Combate em Parceria com Outros CBMs'
           ]
-          for item in required:
-              assert item in html, item
+          for title in required:
+              assert html.count(title) >= 2, title
           assert 'data-metric="Infrações Administrativas"' in html
           assert 'data-metric="Perícia de Incêndios"' in html
           assert 'data-metric="Prevenção e Combate"' in html
           assert 'data-metric="Aeronave Remotamente Pilotada"' in html
-          assert 'data-metric="Missões de Combate"' in html
+          assert 'data-metric="Fogo Técnico"' in html
           print('Validação OK.')
           PY
 
@@ -97,7 +147,7 @@ jobs:
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
-          git commit -m 'feat: atualizar titulos dos indicadores conforme documento'
+          git commit -m 'fix: alinhar titulos de cursos e indicadores'
           for i in 1 2 3; do
             git fetch origin main
             git rebase origin/main && git push origin HEAD:main && exit 0
