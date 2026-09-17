@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/align-course-titles-final.yml'
       - '.github/workflows/.trigger-course-titles-final'
+      - '.github/workflows/.trigger-course-titles-final-2'
   workflow_dispatch:
 
 permissions:
