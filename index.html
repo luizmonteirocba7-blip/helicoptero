@@ -555,7 +555,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <!-- 1. Infrações Administrativas -->
         <button class="kpi-card" data-metric="Infrações Administrativas" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-gavel"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Infrações Administrativas</div>
+          <div class="kpi-label">Infrações Administrativas</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
           <div class="kpi-meta">Meta: <span class="meta-value">40</span></div>
@@ -564,7 +564,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <!-- 2. Perícia de Incêndios -->
         <button class="kpi-card" data-metric="Perícia de Incêndios" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-magnifying-glass-plus"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Perícia de Incêndios Florestais</div>
+          <div class="kpi-label">Perícia de Incêndios</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
           <div class="kpi-meta">Meta: <span class="meta-value">30</span></div>
@@ -573,7 +573,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <!-- 3. Prevenção e Combate -->
         <button class="kpi-card" data-metric="Prevenção e Combate" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-extinguisher"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Prevenção e Combate a Incêndios Florestais</div>
+          <div class="kpi-label">Prevenção e Combate</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
           <div class="kpi-meta">Meta: <span class="meta-value">20</span></div>
@@ -582,7 +582,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <!-- 4. Aeronave Remotamente Pilotada -->
         <button class="kpi-card" data-metric="Aeronave Remotamente Pilotada" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-plane-up"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Aeronave Remotamente Pilotada</div>
+          <div class="kpi-label">Drone (RPAS)</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
           <div class="kpi-meta">Meta: <span class="meta-value">15</span></div>
@@ -591,7 +591,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
         <!-- 5. Fogo Técnico -->
         <button class="kpi-card" data-metric="Fogo Técnico" data-action="filter-metric">
           <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-fire-flame-curved"></i></div><span class="kpi-pct">—</span></div>
-          <div class="kpi-label">Curso de Fogo Técnico</div>
+          <div class="kpi-label">Fogo Técnico</div>
           <div class="kpi-value qtd-value">…</div>
           <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
           <div class="kpi-meta">Meta: <span class="meta-value">20</span></div>
@@ -1019,7 +1019,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           </div>
 
           <!-- 9. Operações de Fiscalização -->
-          <div class="evidence-card-complete  bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-missing   bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-clipboard-check"></i>
@@ -1030,15 +1030,15 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2 mt-auto">
-    <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link">
+    <button type="button" class="ev-foot !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 transition-colors" data-pdf-src="">
       <i class="fa-solid fa-file-pdf"></i> PDF
     </button>
-    <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link" data-drive-link="1" data-drive-link="1">
+    <button type="button" class="ev-thumb !h-auto !overflow-visible !w-full !border-0 !bg-slate-700/60 hover:!bg-brand-500 hover:!text-white !rounded-lg !py-2 !px-1 !text-slate-200 !flex !items-center !justify-center !gap-1.5 !text-[10.5px] !font-extrabold !uppercase tracking-wider transition-colors" data-modal-src="https://placehold.co/1200x800/1e293b/94a3b8?text=Aguardando+Fotos&font=Montserrat" data-drive-link="1" data-drive-link="1">
       <i class="fa-solid fa-camera"></i> Fotos
     </button>
   </div>
 </div><!-- 10. Missões de Fiscalização -->
-          <div class="evidence-card-complete      bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="evidence-card-complete       bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-map-location-dot"></i>
@@ -1057,7 +1057,7 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
     </button>
   </div>
 </div><!-- 11. Formação de Brigadistas -->
-          <div class="evidence-card-complete  bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
+          <div class="  bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col gap-4 hover:border-brand-500/50 hover:bg-slate-800 transition group">
             <div class="flex items-center gap-3">
               <div class="w-11 h-11 shrink-0 rounded-xl bg-slate-700/60 flex items-center justify-center text-brand-400 text-lg">
                 <i class="fa-solid fa-users-gear"></i>
