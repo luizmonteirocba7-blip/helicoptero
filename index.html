@@ -1497,12 +1497,74 @@ async function carregarDadosPlanilha() {
     }
 }
 
+
+function parseDataPrazo(valor) {
+    const raw = String(valor ?? '').trim();
+    if (!raw || raw === '0' || raw === '--/--/----') return null;
+
+    // Formato da planilha: 2027-03-11
+    let match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+        const [, ano, mes, dia] = match.map(Number);
+        return new Date(ano, mes - 1, dia, 23, 59, 59);
+    }
+
+    // Aceita também 11/03/2027 ou 11-03-2027
+    match = raw.match(/^(\d{1,2})[\\/-](\d{1,2})[\\/-](\d{4})$/);
+    if (match) {
+        const [, dia, mes, ano] = match.map(Number);
+        return new Date(ano, mes - 1, dia, 23, 59, 59);
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function atualizarPrazoRestante(indicadores = [], prazoAba = []) {
+    const fontes = [...(Array.isArray(indicadores) ? indicadores : []), ...(Array.isArray(prazoAba) ? prazoAba : [])];
+
+    const registroPrazo = fontes.find(item => {
+        const nome = String(item?.Indicador ?? item?.['Indicador '] ?? '').trim().toLowerCase();
+        return nome.includes('tempo restante') || nome.includes('prazo');
+    });
+
+    if (!registroPrazo) return;
+
+    const dataFim = parseDataPrazo(
+        registroPrazo.Meta ??
+        registroPrazo.meta ??
+        registroPrazo['Meta '] ??
+        registroPrazo.ObjetivoAlcancado ??
+        registroPrazo.Quantidade
+    );
+
+    const mesesEl = document.getElementById('texto-prazo-meses');
+    const dataEl = document.getElementById('texto-data-final');
+    if (!mesesEl || !dataEl || !dataFim) return;
+
+    const agora = new Date();
+    let meses = (dataFim.getFullYear() - agora.getFullYear()) * 12 +
+                (dataFim.getMonth() - agora.getMonth());
+
+    // Mostra meses completos restantes.
+    if (dataFim.getDate() < agora.getDate()) meses -= 1;
+    meses = Math.max(0, meses);
+
+    mesesEl.textContent = String(meses);
+    dataEl.textContent = new Intl.DateTimeFormat('pt-BR').format(dataFim);
+    dataEl.parentElement?.setAttribute(
+        'title',
+        `Prazo final: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(dataFim)}`
+    );
+}
+
 async function carregarPainelAPI(isRefresh = false) {
     const refreshBtn = document.getElementById('btn-refresh');
     if (isRefresh && refreshBtn) refreshBtn.classList.add('is-loading');
     
     try {
         const dadosPlanilha = await carregarDadosPlanilha();
+        atualizarPrazoRestante(dadosPlanilha.indicadores, dadosPlanilha.prazo);
         
         dados = (dadosPlanilha.indicadores || []).map(item => {
             const indicadorOriginal = String(item['Indicador'] || item['Indicador '] || "Desconhecido").trim();
