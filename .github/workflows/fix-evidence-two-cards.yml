@@ -34,8 +34,8 @@ jobs:
                   'complete': True,
               },
               'Operações de Fiscalização': {
-                  'pdf': 'https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link',
-                  'foto': 'https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link',
+                  'pdf': 'https://drive.google.com/file/d/1UlHa5opiD8_cnPwegqZseJFOiR5TsHkn/view?usp=drive_link',
+                  'foto': 'https://drive.google.com/file/d/1-326qamxNqGbkLUZHIjXg69yGko51mRN/view?usp=drive_link',
                   'complete': True,
               },
           }

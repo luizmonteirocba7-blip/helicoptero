@@ -37,8 +37,8 @@ jobs:
           op_chunk = html[op_start:mi_start]
           mi_chunk = html[mi_start:end]
 
-          op_pdf = 'https://drive.google.com/file/d/1Nfk2QLVKfYePxZZkA0VpQadxCK36a4Le/view?usp=drive_link'
-          op_photo = 'https://drive.google.com/file/d/14Yl6WjF5w7QgvBXGLIjnfVB951D71Fwa/view?usp=drive_link'
+          op_pdf = 'https://drive.google.com/file/d/1UlHa5opiD8_cnPwegqZseJFOiR5TsHkn/view?usp=drive_link'
+          op_photo = 'https://drive.google.com/file/d/1-326qamxNqGbkLUZHIjXg69yGko51mRN/view?usp=drive_link'
           mi_pdf = 'https://drive.google.com/file/d/1Jm7rMRiALdTDgZT4bsw3rXGo6z5hDI4K/view?usp=drive_link'
           mi_photo = 'https://drive.google.com/file/d/1i5VOf-RKl88KPpeqM9-dGcdkeQAYyqU4/view?usp=drive_link'
 
