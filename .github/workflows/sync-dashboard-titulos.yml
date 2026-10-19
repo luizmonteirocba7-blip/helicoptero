@@ -112,10 +112,10 @@ jobs:
           other_titles = {
               'Semana de Prevenção': week_title,
               'Missões de Combate': 'Missões de Combate a Incêndios Florestais e Queimada Não Autorizada',
-              'Missões de Fiscalização': 'Missões de Fiscalização (Propriedades Fiscalizadas)',
-              'Capacitação de Brigadistas': 'Capacitação de Brigadistas',
+              'Missões de Fiscalização': 'Fiscalização Ambiental e Estadual',
+              'Capacitação de Brigadistas': 'Brigadistas Capacitadas',
               'Focos de Calor': 'Foco de Calor',
-              'BM FEM Capacitadas': 'BM FEM Capacitados',
+              'BM FEM Capacitadas': 'Servidoras Públicas Capacitadas',
               'Op órgãos federais': 'Operação de Fiscalização com Órgãos Federais',
               'Op de Combate': 'Operação de Combate em Parceria com Outros CBMs',
           }

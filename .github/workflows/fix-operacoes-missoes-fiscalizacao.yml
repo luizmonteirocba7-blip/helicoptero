@@ -105,12 +105,12 @@ jobs:
               'Semana de Prevenção': 'Semana de Prevenção',
               'Missões de Combate': 'Missões de Combate',
               'Operações de Fiscalização': 'Operações de Fiscalização',
-              'Missões de Fiscalização': 'Missões de Fiscalização',
-              'Capacitação de Brigadistas': 'Formação de Brigadistas',
+              'Missões de Fiscalização': 'Fiscalização Ambiental e Estadual',
+              'Capacitação de Brigadistas': 'Brigadistas Capacitadas',
               'Brigada Municipal Mista': 'Brigada Municipal Mista',
               'Publicações': 'Publicações Matérias',
               'Focos de Calor': 'Focos de Calor',
-              'BM FEM Capacitadas': 'BM FEM Capacitadas',
+              'BM FEM Capacitadas': 'Servidoras Públicas Capacitadas',
               'Op órgãos federais': 'OP Órgãos Federais',
               'Op de Combate': 'OP Combate (Parceria)',
               'Eventos Integrados': 'Eventos Integrados',
@@ -168,8 +168,8 @@ jobs:
 
           expected_titles = [
               'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
-              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Missões de Fiscalização',
-              'Formação de Brigadistas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','BM FEM Capacitadas',
+              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Fiscalização Ambiental e Estadual',
+              'Brigadistas Capacitadas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','Servidoras Públicas Capacitadas',
               'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração'
           ]
           for title in expected_titles:
