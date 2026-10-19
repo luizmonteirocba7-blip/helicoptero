@@ -382,6 +382,106 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
   }
 }
 </style>
+<style id="professional-layout-refinements">
+/* Ajustes exclusivamente visuais; preservam os dados e a integração existentes. */
+:root {
+  --text-soft: #64748b;
+}
+
+.sidebar {
+  top: calc(var(--site-header-height) + .75rem);
+  height: calc(100vh - var(--site-header-height) - 1.5rem);
+}
+
+.kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1rem;
+}
+
+.kpi-card {
+  gap: .7rem;
+  padding: 1rem 1.05rem;
+}
+
+.kpi-label {
+  min-height: 3em;
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: .02em;
+}
+
+.kpi-meta {
+  font-size: 12px;
+}
+
+.data-table thead th {
+  font-size: 11px;
+  color: #475569;
+}
+
+.badge {
+  font-size: 11px;
+}
+
+#evidencias [class*="text-[9px]"] {
+  font-size: 11px !important;
+  letter-spacing: .08em;
+}
+
+#evidencias [class*="text-[10.5px]"] {
+  font-size: 12px !important;
+}
+
+#site-nav-links a:focus-visible,
+.icon-btn:focus-visible,
+.refresh-btn:focus-visible,
+#evidencias button:focus-visible {
+  outline: 3px solid var(--brand-500);
+  outline-offset: 3px;
+}
+
+#evidencias button:focus-visible {
+  outline-color: #fda4af;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    top: auto;
+    height: auto;
+  }
+}
+
+@media (max-width: 420px) {
+  .kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #aquisicoes .data-table {
+    font-size: 12px;
+  }
+
+  #aquisicoes .data-table thead th,
+  #aquisicoes .data-table tbody td {
+    padding-left: .65rem;
+    padding-right: .65rem;
+  }
+
+  #evidencias {
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
 </head>
  
 <body class="font-sans">
