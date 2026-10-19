@@ -119,6 +119,7 @@ jobs:
               'Op órgãos federais': 'Operação de Fiscalização com Órgãos Federais',
               'Op de Combate': 'Operação de Combate em Parceria com Outros CBMs',
               'Horas de Voo': 'Horas de Voo',
+              'Órgão Ambiental Fortalecido': 'Órgão Ambiental Fortalecido',
           }
           for metric, title in other_titles.items():
               pattern = re.compile(

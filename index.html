@@ -742,6 +742,15 @@ body.has-expanded-panel::before{ content:''; position:fixed; inset:0; background
           <div class="kpi-meta">Meta: <span class="meta-value">150</span> horas</div>
         </button>
 
+        <!-- 23. Órgão Ambiental Fortalecido -->
+        <button class="kpi-card" data-metric="Órgão Ambiental Fortalecido" data-action="filter-metric">
+          <div class="kpi-top"><div class="kpi-icon"><i class="fa-solid fa-building-shield"></i></div><span class="kpi-pct">—</span></div>
+          <div class="kpi-label">Órgão Ambiental Fortalecido</div>
+          <div class="kpi-value qtd-value">0</div>
+          <div class="kpi-bar"><div class="kpi-bar-fill"></div></div>
+          <div class="kpi-meta">Meta: <span class="meta-value">1</span></div>
+        </button>
+
       </div>
     </section>
  
@@ -1613,7 +1622,8 @@ async function carregarPainelAPI(isRefresh = false) {
             { indicador: 'Eventos Integrados', meta: 10, qtd: 0 },
             { indicador: 'Área Monitorada', meta: 50000, qtd: 0 },
             { indicador: 'Autos de Infração', meta: 50, qtd: 0 },
-            { indicador: 'Horas de Voo', meta: 150, qtd: 0 }
+            { indicador: 'Horas de Voo', meta: 150, qtd: 0 },
+            { indicador: 'Órgão Ambiental Fortalecido', meta: 1, qtd: 0 }
         ];
 
         novosIndicadores.forEach(novo => {
