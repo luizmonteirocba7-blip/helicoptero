@@ -104,7 +104,7 @@ jobs:
               'Campanhas': 'Campanhas',
               'Semana de Prevenção': 'Semana de Prevenção',
               'Missões de Combate': 'Missões de Combate',
-              'Operações de Fiscalização': 'Operações de Fiscalização',
+              'Operações de Fiscalização': 'Operação Combate Estadual/Federal',
               'Missões de Fiscalização': 'Fiscalização Ambiental e Estadual',
               'Capacitação de Brigadistas': 'Brigadistas Capacitadas',
               'Brigada Municipal Mista': 'Brigada Municipal Mista',
@@ -169,7 +169,7 @@ jobs:
 
           expected_titles = [
               'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
-              'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Fiscalização Ambiental e Estadual',
+              'Campanhas','Semana de Prevenção','Missões de Combate','Operação Combate Estadual/Federal','Fiscalização Ambiental e Estadual',
               'Brigadistas Capacitadas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','Servidoras Públicas Capacitadas',
               'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração','Horas de Voo'
           ]
