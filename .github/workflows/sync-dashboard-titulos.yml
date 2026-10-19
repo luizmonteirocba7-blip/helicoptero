@@ -118,6 +118,7 @@ jobs:
               'BM FEM Capacitadas': 'Servidoras Públicas Capacitadas',
               'Op órgãos federais': 'Operação de Fiscalização com Órgãos Federais',
               'Op de Combate': 'Operação de Combate em Parceria com Outros CBMs',
+              'Horas de Voo': 'Horas de Voo',
           }
           for metric, title in other_titles.items():
               pattern = re.compile(

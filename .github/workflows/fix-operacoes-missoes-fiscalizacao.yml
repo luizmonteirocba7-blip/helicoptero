@@ -116,6 +116,7 @@ jobs:
               'Eventos Integrados': 'Eventos Integrados',
               'Área Monitorada': 'Área Monitorada',
               'Autos de Infração': 'Autos de Infração',
+              'Horas de Voo': 'Horas de Voo',
           }
 
           changed = 0
@@ -170,7 +171,7 @@ jobs:
               'Infrações Administrativas','Perícia de Incêndios','Prevenção e Combate','Drone (RPAS)','Fogo Técnico',
               'Campanhas','Semana de Prevenção','Missões de Combate','Operações de Fiscalização','Fiscalização Ambiental e Estadual',
               'Brigadistas Capacitadas','Brigada Municipal Mista','Publicações Matérias','Focos de Calor','Servidoras Públicas Capacitadas',
-              'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração'
+              'OP Órgãos Federais','OP Combate (Parceria)','Eventos Integrados','Área Monitorada','Autos de Infração','Horas de Voo'
           ]
           for title in expected_titles:
               assert f'<div class="kpi-label">{title}</div>' in html, f'Título ausente: {title}'
